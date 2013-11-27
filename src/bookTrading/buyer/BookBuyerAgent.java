@@ -1,6 +1,7 @@
 package bookTrading.buyer;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import jade.core.AID;
@@ -30,19 +31,22 @@ public class BookBuyerAgent extends Agent {
 		}
 		
 		// show the GUI
-		gui = new BookBuyerGUI(this);
+		//gui = new BookBuyerGUI(this);
 		gui.show();
 	}
 	
 	@Override
 	protected void takeDown() {
-		// dispose of the GUI if needed
+		// get rid of the GUI if needed
 		if(gui != null) {
-			gui.dispose();
 			gui = null;
 		}
 		
 		// print a goodbye message
 		System.out.println("BBA " + getAID().getName() + " terminated.");
+	}
+	
+	public void purchase(String bookTitle, int maxPrice, Date deadline) {
+		//TODO
 	}
 }

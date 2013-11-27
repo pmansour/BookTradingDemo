@@ -5,19 +5,19 @@ package bookTrading.buyer;
  * @author peter
  *
  */
-public class BookBuyerGUI {
+public abstract class BookBuyerGUI {
 
-	private BookBuyerAgent agent;
+	protected BookBuyerAgent agent;
 	
+	/**
+	 * Create a new GUI for the given agent.
+	 */
 	public BookBuyerGUI(BookBuyerAgent agent) {
 		this.agent = agent;
 	}
 	
-	public void show() {
-		//TODO
-	}
+	public abstract void show();
+	public abstract void hide();
 	
-	public void dispose() {
-		//TODO
-	}
+	public abstract void notifyUser(String message);
 }
