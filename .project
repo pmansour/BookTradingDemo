@@ -13,5 +13,6 @@
 	</buildSpec>
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
+		<nature>it.fbk.sra.ejade.jadeNature</nature>
 	</natures>
 </projectDescription>
