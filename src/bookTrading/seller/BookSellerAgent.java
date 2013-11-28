@@ -27,7 +27,7 @@ public class BookSellerAgent extends Agent {
 		catalogue = new HashMap<String, PriceManager>();
 		
 		// start and show a new GUI
-		//TODO: gui = new BookSellerGUI(this);
+		gui = new BookSellerGUIText(this);
 		gui.show();
 		
 		// start the two behaviour servers:

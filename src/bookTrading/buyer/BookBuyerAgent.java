@@ -38,7 +38,7 @@ public class BookBuyerAgent extends Agent {
 		}
 		
 		// show the GUI
-		//TODO: gui = new BookBuyerGUI(this);
+		gui = new BookBuyerGUIText(this);
 		gui.show();
 	}
 	
