@@ -1,5 +1,7 @@
 package bookTrading.test;
 
+import java.math.BigInteger;
+
 import bookTrading.behaviours.FactorialBehaviour;
 import bookTrading.common.Callback;
 import jade.core.Agent;
@@ -55,10 +57,10 @@ public class FactorialAgent extends Agent {
 		}
 		
 		// add the factorial behaviour
-		addBehaviour(new FactorialBehaviour(number, new Callback<Long>() {
+		addBehaviour(new FactorialBehaviour(number, new Callback<BigInteger>() {
 
 			@Override
-			public void done(Long factorial) {
+			public void done(BigInteger factorial) {
 				System.out.println(number + "! = " + factorial);
 			}
 			

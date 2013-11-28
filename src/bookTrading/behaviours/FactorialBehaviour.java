@@ -1,5 +1,7 @@
 package bookTrading.behaviours;
 
+import java.math.BigInteger;
+
 import bookTrading.common.Callback;
 
 import jade.core.behaviours.Behaviour;
@@ -8,11 +10,11 @@ public class FactorialBehaviour extends Behaviour {
 	private static final long serialVersionUID = 2362249319916571314L;
 
 	private int number;
-	private Callback<Long> callback;
+	private Callback<BigInteger> callback;
 	
-	private long factorial;
+	private BigInteger factorial;
 	
-	public FactorialBehaviour(int number, Callback<Long> callback) {
+	public FactorialBehaviour(int number, Callback<BigInteger> callback) {
 		this.number = number;
 		this.callback = callback;
 	}
@@ -21,17 +23,17 @@ public class FactorialBehaviour extends Behaviour {
 	public void onStart() {
 		// initialize the factorial
 		if(number < 1) {
-			factorial = 0;
+			factorial = BigInteger.ZERO;
 		} else if(number == 1) {
-			factorial = 1;
+			factorial = BigInteger.ONE;
 		} else {
-			factorial = number--;
+			factorial = BigInteger.valueOf(number--);
 		}
 	}
 	
 	@Override
 	public void action() {
-		this.factorial *= number--;
+		factorial = factorial.multiply(BigInteger.valueOf(number--));
 	}
 
 	@Override
