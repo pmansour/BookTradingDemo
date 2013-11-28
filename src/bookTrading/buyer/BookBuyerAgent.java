@@ -6,6 +6,7 @@ import java.util.List;
 
 import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.TickerBehaviour;
 
 public class BookBuyerAgent extends Agent {
 	private static final long serialVersionUID = -2179361359046163266L;
@@ -31,7 +32,7 @@ public class BookBuyerAgent extends Agent {
 		}
 		
 		// show the GUI
-		//gui = new BookBuyerGUI(this);
+		//TODO: gui = new BookBuyerGUI(this);
 		gui.show();
 	}
 	
@@ -47,6 +48,52 @@ public class BookBuyerAgent extends Agent {
 	}
 	
 	public void purchase(String bookTitle, int maxPrice, Date deadline) {
-		//TODO
+		addBehaviour(new PurchaseManager(this, bookTitle, maxPrice, deadline));
+	}
+	
+	private class PurchaseManager extends TickerBehaviour {
+		private static final long serialVersionUID = -8246238436156814059L;
+		
+		/** How often to tick and try to buy the book. */
+		private static final long TICK_INTERVAL = 60000;
+		/** What to tell the user if the book can't be purchased. */
+		private static final String FAIL_MSG = "Cannot buy book %s";
+		
+		private String bookTitle;
+		private int maxPrice;
+		private long deadline, initTime, deltaT;
+		
+		public PurchaseManager(Agent agent, String bookTitle, int maxPrice, Date deadline) {
+			super(agent, TICK_INTERVAL);
+			
+			// save the given arguments
+			this.bookTitle = bookTitle;
+			this.maxPrice = maxPrice;
+			this.deadline = deadline.getTime();
+			
+			// come up with some times
+			this.initTime = System.currentTimeMillis();
+			this.deltaT = this.deadline - this.initTime;
+		}
+
+		@Override
+		protected void onTick() {
+			long currentTime = System.currentTimeMillis();
+			
+			// if the deadline expired
+			if(currentTime > deadline) {
+				// tell the user and stop trying
+				gui.notifyUser(String.format(FAIL_MSG, bookTitle));
+				stop();
+			} else {
+				// work out the acceptable price (max price * desperateness ratio)
+				long elapsedTime = currentTime - initTime;
+				int acceptablePrice = maxPrice * (int) (elapsedTime / deltaT);
+				
+				// start a new behaviour to get the book at this price
+				//TODO: myAgent.addBehaviour(new BookNegotiator(bookTitle, acceptablePrice, this));
+			}
+		}
+		
 	}
 }
