@@ -6,7 +6,9 @@ import java.util.List;
 
 import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.OneShotBehaviour;
 import jade.core.behaviours.TickerBehaviour;
+import jade.lang.acl.ACLMessage;
 
 public class BookBuyerAgent extends Agent {
 	private static final long serialVersionUID = -2179361359046163266L;
@@ -91,9 +93,49 @@ public class BookBuyerAgent extends Agent {
 				int acceptablePrice = maxPrice * (int) (elapsedTime / deltaT);
 				
 				// start a new behaviour to get the book at this price
-				//TODO: myAgent.addBehaviour(new BookNegotiator(bookTitle, acceptablePrice, this));
+				myAgent.addBehaviour(new BookNegotiator(bookTitle, acceptablePrice, this));
 			}
 		}
 		
+	}
+	
+	/**
+	 * So far, all this does is send a Call For Proposals (CFP) message to all registered
+	 * seller agents.
+	 * @author peter
+	 *
+	 */
+	private class BookNegotiator extends OneShotBehaviour {
+		
+		private String bookTitle;
+		private int price;
+		private PurchaseManager pm;
+		
+		public BookNegotiator(String bookTitle, int acceptablePrice, PurchaseManager pm) {
+			super();
+			
+			// save the given arguments
+			this.bookTitle = bookTitle;
+			this.price = acceptablePrice;
+			this.pm = pm;
+		}
+		
+		/** Send a CFP to all seller agents. */
+		@Override
+		public void action() {
+			// create a CFP message
+			ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
+			
+			// add all the seller agents to the list of receivers
+			for(AID seller : sellers) {
+				cfp.addReceiver(seller);
+			}
+			
+			// add the book we're looking for
+			cfp.setContent(bookTitle);
+			
+			// finally, send the message
+			myAgent.send(cfp);
+		}
 	}
 }
