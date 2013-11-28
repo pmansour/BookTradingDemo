@@ -1,6 +1,5 @@
 package bookTrading.seller;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -66,7 +65,7 @@ public class BookSellerAgent extends Agent {
 	private class PriceManager extends TickerBehaviour {
 		private static final long serialVersionUID = -5667551287935590044L;
 		
-		/** How often to wake up and look for prices for a book. */
+		/** How often to wake up and decrease the price. */
 		private static final long TICKER_INTERVAL = 60000;
 		/** What to tell the user when we can't sell the book by the given deadline. */
 		private static final String EXPR_MSG = "Cannot sell the book %s.";
@@ -128,8 +127,7 @@ public class BookSellerAgent extends Agent {
 	 * 
 	 * Receives an incoming CFP.
 	 * If the book is in the catalogue:
-	 * 	-> Replies with a PROPOSE message containing the proposal (title + price).
-	 * 	-> If there was a problem, reply with a NOT UNDERSTOOD.
+	 * 	-> Replies with a PROPOSE message containing the proposal price.
 	 * Otherwise,
 	 * 	-> Replies with a REFUSE message.
 	 * 
@@ -161,14 +159,9 @@ public class BookSellerAgent extends Agent {
 			
 			// if we have the book
 			if(pm != null) {
-					try {
-					// reply with a proposal
-					reply.setPerformative(ACLMessage.PROPOSE);
-					reply.setContentObject(new Proposal(title, pm.getCurrentPrice()));
-				} catch (IOException e) {
-					// or a NOT UNDERSTOOD if an error occurred
-					reply.setPerformative(ACLMessage.NOT_UNDERSTOOD);
-				}
+				// reply with a proposal
+				reply.setPerformative(ACLMessage.PROPOSE);
+				reply.setContent(String.valueOf(pm.getCurrentPrice()));
 			// if we don't
 			} else {
 				// reply with a REFUSE
