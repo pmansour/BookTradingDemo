@@ -49,6 +49,8 @@ public class BookSellerGUIText extends BookSellerGUI {
 						long deadline = Long.parseLong(tokens[4]);
 						// start a new task for the agent
 						agent.putForSale(title, initPrice, minPrice, new Date(System.currentTimeMillis() + (deadline * 1000)));						
+						// confirm that we've received this
+						System.out.println("Selling " + title + " for at least $" + minPrice + " starting with " + initPrice + " in under " + deadline + " seconds.");
 					} catch(Exception e) {
 						// if it's invalid, print the usage again
 						printUsage();

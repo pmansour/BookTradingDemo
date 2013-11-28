@@ -47,7 +47,9 @@ public class BookBuyerGUIText extends BookBuyerGUI {
 						int maxPrice = Integer.parseInt(tokens[2]);
 						long deadline = Long.parseLong(tokens[3]);
 						// start a new task for the agent
-						agent.purchase(title, maxPrice, new Date(System.currentTimeMillis() + (deadline * 1000)));						
+						agent.purchase(title, maxPrice, new Date(System.currentTimeMillis() + (deadline * 1000)));
+						// confirm that we've received this
+						System.out.println("Buying " + title + " for under $" + maxPrice + " in under " + deadline + " seconds.");
 					} catch(Exception e) {
 						// if it's invalid, print the usage again
 						printUsage();

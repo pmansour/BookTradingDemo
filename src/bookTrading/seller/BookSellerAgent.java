@@ -40,6 +40,7 @@ public class BookSellerAgent extends Agent {
 	protected void takeDown() {
 		// get rid of the GUI if it's there
 		if(gui != null) {
+			gui.hide();
 			gui = null;
 		}
 		

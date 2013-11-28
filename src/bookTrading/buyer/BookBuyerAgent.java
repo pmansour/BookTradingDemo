@@ -46,6 +46,7 @@ public class BookBuyerAgent extends Agent {
 	protected void takeDown() {
 		// get rid of the GUI if needed
 		if(gui != null) {
+			gui.hide();
 			gui = null;
 		}
 		
