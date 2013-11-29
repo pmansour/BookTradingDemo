@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import bookTrading.common.BookInfo;
 import bookTrading.common.Proposal;
 
 import jade.core.Agent;
@@ -37,9 +38,12 @@ public class BookSellerAgent extends Agent {
 		
 		// register this agent's service(s) with the DF
 		registerServices();
+
+		// start the external controller
+		startExternalController();
 		
 		// start and show a new GUI
-		gui = new BookSellerGUIText(this);
+		gui = new BookSellerGUITextReadOnly(this);
 		gui.show();
 		
 		// start the two behaviour servers:
@@ -61,6 +65,28 @@ public class BookSellerAgent extends Agent {
 		
 		// print a goodbye message
 		System.out.println("BSA " + getAID().getName() + " terminating.");
+	}
+	
+	private void startExternalController() {
+		// allow receiving objects from outside
+		setEnabledO2ACommunication(true, 0);
+		// handle receiving them
+		addBehaviour(new CyclicBehaviour(this) {
+			private static final long serialVersionUID = 6696662791288144719L;
+
+			@Override
+			public void action() {
+				// try to get a new book to sell from the O2A mailbox
+				BookInfo info = (BookInfo) myAgent.getO2AObject();
+				// if we have one, process it; otherwise, block
+				if(info != null) {
+					putForSale(info.getTitle(), info.getInitPrice(), info.getMinPrice(), info.getDeadline());
+				} else {
+					block();
+				}
+			}
+			
+		});
 	}
 	
 	/**
@@ -101,11 +127,20 @@ public class BookSellerAgent extends Agent {
 		}
 	}
 	
+	private static final String CONFIRM_SALE =
+			"Selling %s for initially $%d but minimum $%d before %s";
 	/**
 	 * Put a new book up for sale.
 	 */
 	public void putForSale(String bookTitle, int initPrice, int minPrice, Date deadline) {
 		addBehaviour(new PriceManager(this, bookTitle, initPrice, minPrice, deadline));
+		// confirm the new sale task
+		gui.notifyUser(String.format(CONFIRM_SALE,
+					bookTitle,
+					initPrice,
+					minPrice,
+					deadline.toString()
+				));
 	}
 	
 	/**

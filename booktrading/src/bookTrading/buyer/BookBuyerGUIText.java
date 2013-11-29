@@ -7,15 +7,17 @@ public class BookBuyerGUIText extends BookBuyerGUI {
 	private static final String EXIT_CODE = "-b";
 	
 	private Thread interpreter;
+	private String name;
 
 	public BookBuyerGUIText(BookBuyerAgent agent) {
 		super(agent);
+		this.name = agent.getAID().getLocalName();
 	}
 	
 	@Override
 	public void show() {
 		// print some welcome text
-		System.out.println("Welcome to the Book Buyer!");
+		System.out.println(name + ": Welcome to the Book Buyer! My name is " + name);
 		printUsage();
 		// start the interpreter (in another thread)
 		interpreter = new Thread(new Runnable() {
@@ -59,9 +61,9 @@ public class BookBuyerGUIText extends BookBuyerGUI {
 	}
 	
 	public void printUsage() {
-		System.out.println("To purchase a book, please enter a line in the following form:");
-		System.out.println("buy,[book title],[maximum price],[deadline (in seconds)]");
-		System.out.println("To exit, please type in '" + EXIT_CODE + "'");		
+		System.out.println(name + ": To purchase a book, please enter a line in the following form:");
+		System.out.println(name + ": buy,[book title],[maximum price],[deadline (in seconds)]");
+		System.out.println(name + ": To exit, please type in '" + EXIT_CODE + "'");		
 	}
 
 	@Override
@@ -72,7 +74,7 @@ public class BookBuyerGUIText extends BookBuyerGUI {
 
 	@Override
 	public void notifyUser(String message) {
-		System.out.println("Buyer: " + message);
+		System.out.println(name + ": " + message);
 	}
 
 }

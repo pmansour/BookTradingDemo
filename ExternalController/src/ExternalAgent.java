@@ -1,5 +1,7 @@
 import java.util.Date;
 
+import bookTrading.common.BookInfo;
+
 import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
 import jade.wrapper.StaleProxyException;

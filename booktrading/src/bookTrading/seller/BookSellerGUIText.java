@@ -7,15 +7,17 @@ public class BookSellerGUIText extends BookSellerGUI {
 	private static final String EXIT_CODE = "-s";
 	
 	private Thread interpreter;
+	private String name;
 
 	public BookSellerGUIText(BookSellerAgent agent) {
 		super(agent);
+		this.name = agent.getAID().getLocalName();
 	}
 	
 	@Override
 	public void show() {
 		// print some welcome text
-		System.out.println("Welcome to the Book Seller!");
+		System.out.println(name + ": Welcome to the Book Seller! My name is " + name);
 		printUsage();
 		// start the interpreter (in another thread)
 		interpreter = new Thread(new Runnable() {
@@ -49,8 +51,6 @@ public class BookSellerGUIText extends BookSellerGUI {
 						long deadline = Long.parseLong(tokens[4]);
 						// start a new task for the agent
 						agent.putForSale(title, initPrice, minPrice, new Date(System.currentTimeMillis() + (deadline * 1000)));						
-						// confirm that we've received this
-						System.out.println("Selling " + title + " for at least $" + minPrice + " starting with $" + initPrice + " in under " + deadline + " seconds.");
 					} catch(Exception e) {
 						// if it's invalid, print the usage again
 						printUsage();
@@ -62,9 +62,9 @@ public class BookSellerGUIText extends BookSellerGUI {
 	}
 	
 	public void printUsage() {
-		System.out.println("To sell a book, please enter a line in the following form:");
-		System.out.println("sell,[book title],[initial price],[minimum price],[deadline (in seconds)]");
-		System.out.println("To exit, please type in '" + EXIT_CODE + "'");		
+		System.out.println(name + ": To sell a book, please enter a line in the following form:");
+		System.out.println(name + ": sell,[book title],[initial price],[minimum price],[deadline (in seconds)]");
+		System.out.println(name + ": To exit, please type in '" + EXIT_CODE + "'");		
 	}
 
 	@Override
@@ -75,7 +75,7 @@ public class BookSellerGUIText extends BookSellerGUI {
 
 	@Override
 	public void notifyUser(String message) {
-		System.out.println("Seller: " + message);
+		System.out.println(name + ": " + message);
 	}
 
 }

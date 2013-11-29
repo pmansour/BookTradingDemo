@@ -53,7 +53,7 @@ public class BookBuyerAgent extends Agent {
 		startExternalController();
 		
 		// start the GUI
-		gui = new BookBuyerGUIText(this);
+		gui = new BookBuyerGUITextReadOnly(this);
 		gui.show();
 	}
 	@Override
@@ -120,11 +120,11 @@ public class BookBuyerAgent extends Agent {
 					for(DFAgentDescription result : results) {
 						sellers.add(result.getName());
 					}
-					/*// [debug message]
-					System.err.println("Updated list of seller agents:");
+					// [debug message]
+					gui.notifyUser("Updated list of sellers:");
 					for(AID seller : sellers) {
 						System.err.println("-> " + seller.getLocalName());
-					}*/
+					}
 				} catch(FIPAException fe) {
 					fe.printStackTrace(System.err);
 				}
@@ -134,7 +134,7 @@ public class BookBuyerAgent extends Agent {
 	}
 	
 	private static final String CONFIRM_PURCHASE =
-			"%s: Buying %s for $%d or less before %s";
+			"Buying %s for $%d or less before %s";
 	/**
 	 * Start looking for a new book to purchase.
 	 */
@@ -142,7 +142,6 @@ public class BookBuyerAgent extends Agent {
 		addBehaviour(new PurchaseManager(this, bookTitle, maxPrice, deadline));
 		// confirm the new purchase task
 		gui.notifyUser(String.format(CONFIRM_PURCHASE,
-					getAID().getLocalName(),
 					bookTitle,
 					maxPrice,
 					deadline.toString()
@@ -234,9 +233,9 @@ public class BookBuyerAgent extends Agent {
 		/** The conversation ID to use in all the conversations we start. */
 		private static final String CONV_ID = "book-trade";
 		/** The "reply with" parameter pattern for the CFP messages. */
-		private static final String RW_CFP = "cfp%ld";
+		private static final String RW_CFP = "cfp%d";
 		/** The "reply with" parameter pattern for the accept proposal messages. */
-		private static final String RW_AP = "order%ld";
+		private static final String RW_AP = "order%d";
 		/** The usual message deadline which sellers have to reply by. */
 		private static final long MSG_DEADLINE = 30 * 1000;
 		/** What to tell the user if there was a successful purchase. */
