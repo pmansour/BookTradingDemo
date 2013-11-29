@@ -5,17 +5,26 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import bookTrading.common.BookInfo;
 import bookTrading.common.Proposal;
+import bookTrading.seller.BookSellerAgent;
 
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
+import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
 public class BookBuyerAgent extends Agent {
 	private static final long serialVersionUID = -2179361359046163266L;
+	
+	private static final long REFRESH_SELLERS_INTERVAL = 60 * 1000;
 
 	// the agents that are selling books
 	private List<AID> sellers;
@@ -28,20 +37,25 @@ public class BookBuyerAgent extends Agent {
 		System.out.println("BBA " + getAID().getName() + " ready.");
 		
 		// load the sellers from the command-line arguments
+		sellers = new ArrayList<AID>();
 		Object[] arguments = getArguments();
 		if(arguments != null) {
-			sellers = new ArrayList<AID>(arguments.length);
 			for(Object seller : arguments) {
 				// create the sellers' AIDs from their local names
 				sellers.add(new AID((String) seller, AID.ISLOCALNAME));
 			}
 		}
 		
-		// show the GUI
+		// start refreshing the list of sellers every now and then
+		startRefreshingSellers();
+		
+		// start the external controller
+		startExternalController();
+		
+		// start the GUI
 		gui = new BookBuyerGUIText(this);
 		gui.show();
 	}
-	
 	@Override
 	protected void takeDown() {
 		// get rid of the GUI if needed
@@ -54,11 +68,85 @@ public class BookBuyerAgent extends Agent {
 		System.out.println("BBA " + getAID().getName() + " terminated.");
 	}
 	
+	private void startExternalController() {
+		// allow receiving objects from outside
+		setEnabledO2ACommunication(true, 0);
+		// handle receiving them
+		addBehaviour(new CyclicBehaviour(this) {
+			private static final long serialVersionUID = 6696662791288144719L;
+
+			@Override
+			public void action() {
+				// try to get a new book to buy from the O2A mailbox
+				BookInfo info = (BookInfo) myAgent.getO2AObject();
+				// if we have one, process it; otherwise, block
+				if(info != null) {
+					purchase(info.getTitle(), info.getMaxPrice(), info.getDeadline());
+				} else {
+					block();
+				}
+			}
+			
+		});
+	}
+	
+	/**
+	 * Add a behaviour that continuously refreshes the list of sellers through
+	 * the DF.
+	 */
+	private void startRefreshingSellers() {
+		addBehaviour(new TickerBehaviour(this, REFRESH_SELLERS_INTERVAL) {
+			private static final long serialVersionUID = 2727449035142212115L;
+
+			@Override
+			protected void onTick() {
+				DFAgentDescription template;
+				ServiceDescription service;
+				
+				// initialize the template (and its service)
+				template = new DFAgentDescription();
+				service = new ServiceDescription();
+				
+				// we need a book selling service
+				service.setType(BookSellerAgent.BS_SERVICE_TYPE);
+				template.addServices(service);
+				
+				// look for it
+				try {
+					DFAgentDescription[] results = DFService.search(myAgent, template);
+					// get rid of the old list of sellers
+					sellers.clear();
+					// add the ones from the search results
+					for(DFAgentDescription result : results) {
+						sellers.add(result.getName());
+					}
+					/*// [debug message]
+					System.err.println("Updated list of seller agents:");
+					for(AID seller : sellers) {
+						System.err.println("-> " + seller.getLocalName());
+					}*/
+				} catch(FIPAException fe) {
+					fe.printStackTrace(System.err);
+				}
+			}
+			
+		});
+	}
+	
+	private static final String CONFIRM_PURCHASE =
+			"%s: Buying %s for $%d or less before %s";
 	/**
 	 * Start looking for a new book to purchase.
 	 */
 	public void purchase(String bookTitle, int maxPrice, Date deadline) {
 		addBehaviour(new PurchaseManager(this, bookTitle, maxPrice, deadline));
+		// confirm the new purchase task
+		gui.notifyUser(String.format(CONFIRM_PURCHASE,
+					getAID().getLocalName(),
+					bookTitle,
+					maxPrice,
+					deadline.toString()
+				));
 	}
 	
 	/**
@@ -133,8 +221,9 @@ public class BookBuyerAgent extends Agent {
 		WAITING_FOR_CONFIRMATION,	// Before #5 - Waiting for confirmation
 		FINISHED					// Finished either in a success or failure.
 	};
+	
 	/**
-	 * At any time, if we're finished, then stop.
+	 * Handle negotiating on the given price for the given book with all the sellers.
 	 * 
 	 * @author peter
 	 *

@@ -1,21 +1,21 @@
-package bookTrading.seller;
+package bookTrading.buyer;
 
 import java.util.Date;
 import java.util.Scanner;
 
-public class BookSellerGUIText extends BookSellerGUI {
-	private static final String EXIT_CODE = "-s";
+public class BookBuyerGUIText extends BookBuyerGUI {
+	private static final String EXIT_CODE = "-b";
 	
 	private Thread interpreter;
 
-	public BookSellerGUIText(BookSellerAgent agent) {
+	public BookBuyerGUIText(BookBuyerAgent agent) {
 		super(agent);
 	}
 	
 	@Override
 	public void show() {
 		// print some welcome text
-		System.out.println("Welcome to the Book Seller!");
+		System.out.println("Welcome to the Book Buyer!");
 		printUsage();
 		// start the interpreter (in another thread)
 		interpreter = new Thread(new Runnable() {
@@ -35,8 +35,8 @@ public class BookSellerGUIText extends BookSellerGUI {
 					// split it into tokens
 					String[] tokens = line.split(",");
 					
-					// we're only concerned if the first token is 'sell'
-					if(tokens[0].equalsIgnoreCase("sell") == false) {
+					// we're only concerned if the first token is 'buy'
+					if(tokens[0].equalsIgnoreCase("buy") == false) {
 						continue;
 					}
 					
@@ -44,13 +44,10 @@ public class BookSellerGUIText extends BookSellerGUI {
 					try {
 						// get the components
 						String title = tokens[1];
-						int initPrice = Integer.parseInt(tokens[2]);
-						int minPrice = Integer.parseInt(tokens[3]);
-						long deadline = Long.parseLong(tokens[4]);
+						int maxPrice = Integer.parseInt(tokens[2]);
+						long deadline = Long.parseLong(tokens[3]);
 						// start a new task for the agent
-						agent.putForSale(title, initPrice, minPrice, new Date(System.currentTimeMillis() + (deadline * 1000)));						
-						// confirm that we've received this
-						System.out.println("Selling " + title + " for at least $" + minPrice + " starting with " + initPrice + " in under " + deadline + " seconds.");
+						agent.purchase(title, maxPrice, new Date(System.currentTimeMillis() + (deadline * 1000)));
 					} catch(Exception e) {
 						// if it's invalid, print the usage again
 						printUsage();
@@ -63,7 +60,7 @@ public class BookSellerGUIText extends BookSellerGUI {
 	
 	public void printUsage() {
 		System.out.println("To purchase a book, please enter a line in the following form:");
-		System.out.println("sell,[book title],[initial price],[minimum price],[deadline (in seconds)]");
+		System.out.println("buy,[book title],[maximum price],[deadline (in seconds)]");
 		System.out.println("To exit, please type in '" + EXIT_CODE + "'");		
 	}
 
@@ -75,7 +72,7 @@ public class BookSellerGUIText extends BookSellerGUI {
 
 	@Override
 	public void notifyUser(String message) {
-		System.out.println("Seller: " + message);
+		System.out.println("Buyer: " + message);
 	}
 
 }

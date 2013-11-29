@@ -9,12 +9,18 @@ import bookTrading.common.Proposal;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
+import jade.domain.DFService;
+import jade.domain.FIPAException;
+import jade.domain.FIPAAgentManagement.DFAgentDescription;
+import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
 
 public class BookSellerAgent extends Agent {
 	private static final long serialVersionUID = 408650196499616944L;
+	
+	public static final String BS_SERVICE_TYPE = "Book-Selling";
 
 	/** The catalogue of books currently on sale. */
 	private Map<String, PriceManager> catalogue;
@@ -23,8 +29,14 @@ public class BookSellerAgent extends Agent {
 	
 	@Override
 	protected void setup() {
+		// print a welcome message
+		System.out.println("BSA " + getAID().getName() + " ready.");
+		
 		// initialize the catalogue
 		catalogue = new HashMap<String, PriceManager>();
+		
+		// register this agent's service(s) with the DF
+		registerServices();
 		
 		// start and show a new GUI
 		gui = new BookSellerGUIText(this);
@@ -44,8 +56,49 @@ public class BookSellerAgent extends Agent {
 			gui = null;
 		}
 		
+		// this agent no longer provides any services
+		deregisterServices();
+		
 		// print a goodbye message
 		System.out.println("BSA " + getAID().getName() + " terminating.");
+	}
+	
+	/**
+	 * Register this agent's service(s) in the DF.
+	 */
+	private void registerServices() {
+		DFAgentDescription dfd;
+		ServiceDescription service;
+		
+		// create the agent description for this agent
+		dfd = new DFAgentDescription();
+		dfd.setName(getAID());
+		
+		// create the actual service description
+		service = new ServiceDescription();
+		service.setType(BS_SERVICE_TYPE);
+		service.setName(getLocalName() + '-' + BS_SERVICE_TYPE);
+		
+		// add the service to this agent
+		dfd.addServices(service);
+		
+		// finally, register the service with the DF
+		try {
+			DFService.register(this, dfd);
+		} catch(FIPAException fe) {
+			fe.printStackTrace(System.err);
+		}
+	}
+	
+	/**
+	 * Deregister this agent's service(s) in the DF.
+	 */
+	private void deregisterServices() {
+		try {
+			DFService.deregister(this);
+		} catch(FIPAException fe) {
+			fe.printStackTrace(System.err);
+		}
 	}
 	
 	/**
