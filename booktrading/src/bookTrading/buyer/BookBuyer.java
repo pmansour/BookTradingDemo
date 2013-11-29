@@ -4,6 +4,6 @@ import java.util.Date;
 
 public interface BookBuyer {
 
-	public void buy(String bookTitle, int maxPrice, Date deadline);
+	public void buy(String bookTitle, double maxPrice, Date deadline);
 	
 }

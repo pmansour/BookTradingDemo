@@ -11,16 +11,16 @@ public class BookInfo implements Serializable {
 	private Date deadline;
 	
 	// for buyer agents
-	private int maxPrice;
+	private double maxPrice;
 	
 	// for seller agents
-	private int initPrice;
-	private int minPrice;
+	private double initPrice;
+	private double minPrice;
 	
 	/**
 	 * A BookInfo for a buyer agent.
 	 */
-	public BookInfo(String title, int maxPrice, Date deadline) {
+	public BookInfo(String title, double maxPrice, Date deadline) {
 		this.title = title;
 		this.deadline = deadline;
 
@@ -29,7 +29,7 @@ public class BookInfo implements Serializable {
 	/**
 	 * A BookInfo for a seller agent.
 	 */
-	public BookInfo(String title, int initPrice, int minPrice, Date deadline) {
+	public BookInfo(String title, double initPrice, double minPrice, Date deadline) {
 		this.title = title;
 		this.deadline = deadline;
 		
@@ -44,14 +44,14 @@ public class BookInfo implements Serializable {
 		return deadline;
 	}
 
-	public int getMaxPrice() {
+	public double getMaxPrice() {
 		return maxPrice;
 	}
 	
-	public int getInitPrice() {
+	public double getInitPrice() {
 		return initPrice;
 	}
-	public int getMinPrice() {
+	public double getMinPrice() {
 		return minPrice;
 	}
 }

@@ -2,7 +2,6 @@ package completelyIrrelevant;
 
 import java.math.BigInteger;
 
-import bookTrading.behaviours.FactorialBehaviour;
 import jade.core.Agent;
 
 /**

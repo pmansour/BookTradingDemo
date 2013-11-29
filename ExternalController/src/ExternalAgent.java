@@ -71,7 +71,7 @@ public class ExternalAgent implements BookBuyer, BookSeller {
 	/**
 	 * Only applicable for buyer agents. Send a BookInfo object to the agent.
 	 */
-	public void buy(String title, int maxPrice, Date deadline) {
+	public void buy(String title, double maxPrice, Date deadline) {
 		BookInfo info = new BookInfo(title, maxPrice, deadline);
 		try {
 			agent.putO2AObject(info, false);
@@ -82,7 +82,7 @@ public class ExternalAgent implements BookBuyer, BookSeller {
 	/**
 	 * Only applicable for seller agents. Send a BookInfo object to the agent.
 	 */
-	public void sell(String title, int initPrice, int minPrice, Date deadline) {
+	public void sell(String title, double initPrice, double minPrice, Date deadline) {
 		BookInfo info = new BookInfo(title, initPrice, minPrice, deadline);
 		try {
 			agent.putO2AObject(info, false);

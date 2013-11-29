@@ -11,9 +11,9 @@ public class Proposal implements Serializable {
 	private static final long serialVersionUID = 3427391073513708991L;
 
 	private String bookTitle;
-	private int price;
+	private double price;
 	
-	public Proposal(String bookTitle, int price) {
+	public Proposal(String bookTitle, double price) {
 		this.bookTitle = bookTitle;
 		this.price = price;
 	}
@@ -21,7 +21,7 @@ public class Proposal implements Serializable {
 	public String getBookTitle() {
 		return bookTitle;
 	}
-	public int getPrice() {
+	public double getPrice() {
 		return price;
 	}
 }

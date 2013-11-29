@@ -32,21 +32,18 @@ public class BookSellerAgent extends Agent implements BookSeller {
 	
 	@Override
 	protected void setup() {
-		// print a welcome message
-		System.out.println("BSA " + getAID().getName() + " ready.");
+		// start and show a new GUI
+		gui = new BookSellerGUI(this);
+		gui.show();
 		
 		// initialize the catalogue
 		catalogue = new HashMap<String, PriceManager>();
-		
+				
 		// register this agent's service(s) with the DF
 		registerServices();
 
 		// start the external controller
 		startExternalController();
-		
-		// start and show a new GUI
-		gui = new BookSellerGUI(this);
-		gui.show();
 		
 		// start the two behaviour servers:
 		// serve calls for price from buyer agents
@@ -138,11 +135,11 @@ public class BookSellerAgent extends Agent implements BookSeller {
 	}
 	
 	private static final String CONFIRM_SALE =
-			"Selling %s for initially $%d but minimum $%d before %s";
+			"Selling %s for initially $%.2f but minimum $%.2f before %s";
 	/**
 	 * Put a new book up for sale.
 	 */
-	public void sell(String bookTitle, int initPrice, int minPrice, Date deadline) {
+	public void sell(String bookTitle, double initPrice, double minPrice, Date deadline) {
 		addBehaviour(new PriceManager(this, bookTitle, initPrice, minPrice, deadline));
 		// echo the new sale task
 		gui.notifyUser(String.format(CONFIRM_SALE,
@@ -165,20 +162,21 @@ public class BookSellerAgent extends Agent implements BookSeller {
 		private static final long serialVersionUID = -5667551287935590044L;
 		
 		/** How often to wake up and decrease the price. */
-		private static final long TICKER_INTERVAL = 60000;
+		private static final long TICKER_INTERVAL = 10 * 1000;
 		/** What to tell the user when we can't sell the book by the given deadline. */
 		private static final String EXPR_MSG = "Could not sell the book %s before the deadline.";
 
 		private String bookTitle;
-		private int initPrice, currentPrice, deltaP;
+		private double initPrice, minPrice, currentPrice, deltaP;
 		private long initTime, deadline, deltaT;
 		
-		public PriceManager(Agent agent, String bookTitle, int initPrice, int minPrice, Date deadline) {
+		public PriceManager(Agent agent, String bookTitle, double initPrice, double minPrice, Date deadline) {
 			super(agent, TICKER_INTERVAL);
 			
 			// save the given arguments
 			this.bookTitle = bookTitle;
 			this.initPrice = initPrice;
+			this.minPrice = minPrice;
 			this.deadline = deadline.getTime();
 			
 			// work out some stuff
@@ -211,13 +209,17 @@ public class BookSellerAgent extends Agent implements BookSeller {
 			} else {
 				// work out the current price
 				long elapsedTime = currentTime - initTime;
-				currentPrice = initPrice - deltaP * (int) (elapsedTime / deltaT);
+				currentPrice = initPrice - deltaP * ((1.0 * elapsedTime) / deltaT);
+				// make sure its within bounds
+				if(currentPrice < minPrice) {
+					currentPrice = minPrice;
+				}
 				// inform the user of the new price
-				gui.notifyUser("Now accepting $" + currentPrice + " for " + bookTitle + ".");
+				gui.notifyUser(String.format("Now accepting $%.2f for %s.", currentPrice, bookTitle));
 			}
 		}
 		
-		public int getCurrentPrice() {
+		public double getCurrentPrice() {
 			return currentPrice;
 		}
 		
@@ -296,7 +298,7 @@ public class BookSellerAgent extends Agent implements BookSeller {
 		private static final long serialVersionUID = 5093118259000491987L;
 
 		/** What to tell the user when an item has been sold successfully. */
-		private static final String SUCCESS_MSG = "Book %s has been sold for %d.";
+		private static final String SUCCESS_MSG = "Book %s has been sold for %.2f.";
 		
 		// we only care about Accept Proposal messages
 		private MessageTemplate template =

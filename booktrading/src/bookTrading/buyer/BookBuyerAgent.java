@@ -35,28 +35,15 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 	
 	@Override
 	protected void setup() {
-		// print a welcome message
-		System.out.println("BBA " + getAID().getName() + " ready.");
-		
-		// load the sellers from the command-line arguments
-		sellers = new ArrayList<AID>();
-		Object[] arguments = getArguments();
-		if(arguments != null) {
-			for(Object seller : arguments) {
-				// create the sellers' AIDs from their local names
-				sellers.add(new AID((String) seller, AID.ISLOCALNAME));
-			}
-		}
+		// start the GUI
+		gui = new BookBuyerGUI(this);
+		gui.show();
 		
 		// start refreshing the list of sellers every now and then
 		startRefreshingSellers();
 		
 		// start the external controller
 		startExternalController();
-		
-		// start the GUI
-		gui = new BookBuyerGUI(this);
-		gui.show();
 	}
 	@Override
 	protected void takeDown() {
@@ -97,9 +84,21 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 	 * the DF.
 	 */
 	private void startRefreshingSellers() {
+		// initialize the sellers array
+		sellers = new ArrayList<AID>();
+		
+		// consistently refresh it
 		addBehaviour(new TickerBehaviour(this, REFRESH_SELLERS_INTERVAL) {
 			private static final long serialVersionUID = 2727449035142212115L;
 
+			@Override
+			public void onStart() {
+				super.onStart();
+				
+				// initially do a refresh
+				onTick();
+			}
+			
 			@Override
 			protected void onTick() {
 				DFAgentDescription template;
@@ -122,7 +121,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 					for(DFAgentDescription result : results) {
 						sellers.add(result.getName());
 					}
-					// [debug message]
+					/*// [debug message]
 					StringBuilder sb = new StringBuilder();
 					sb.append("Updated list of sellers: {");
 					for(AID seller : sellers) {
@@ -130,7 +129,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 						sb.append(';');
 					}
 					sb.append('}');
-					gui.notifyUser(sb.toString());
+					gui.notifyUser(sb.toString());*/
 				} catch(FIPAException fe) {
 					fe.printStackTrace(System.err);
 				}
@@ -140,11 +139,11 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 	}
 	
 	private static final String CONFIRM_PURCHASE =
-			"Buying %s for $%d or less before %s";
+			"Buying %s for $%.2f or less before %s";
 	/**
 	 * Start looking for a new book to purchase.
 	 */
-	public void buy(String bookTitle, int maxPrice, Date deadline) {
+	public void buy(String bookTitle, double maxPrice, Date deadline) {
 		addBehaviour(new PurchaseManager(this, bookTitle, maxPrice, deadline));
 		// echo the new purchase task
 		gui.notifyUser(String.format(CONFIRM_PURCHASE,
@@ -166,17 +165,17 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		private static final long serialVersionUID = -8246238436156814059L;
 		
 		/** How often to wake up and increase the price. */
-		private static final long TICK_INTERVAL = 60000;
+		private static final long TICK_INTERVAL = 10 * 1000;
 		/** What to tell the user if the book can't be purchased. */
 		private static final String FAIL_MSG = "Could not buy book %s before the deadline.";
 		
 		private String bookTitle;
-		private int maxPrice;
+		private double maxPrice;
 		private long deadline, initTime, deltaT;
 		
 		private boolean finished;
 		
-		public PurchaseManager(Agent agent, String bookTitle, int maxPrice, Date deadline) {
+		public PurchaseManager(Agent agent, String bookTitle, double maxPrice, Date deadline) {
 			super(agent, TICK_INTERVAL);
 			
 			// save the given arguments
@@ -204,7 +203,12 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 			} else {
 				// work out the acceptable price (max price * desperateness ratio)
 				long elapsedTime = currentTime - initTime;
-				int acceptablePrice = maxPrice * (int) (elapsedTime / deltaT);
+				double acceptablePrice = maxPrice * ((1.0 * elapsedTime) / deltaT);
+				
+				// make sure the new price is within bounds
+				if(acceptablePrice > maxPrice) {
+					acceptablePrice = maxPrice;
+				}
 				
 				// start a new behaviour to get the book at this price
 				myAgent.addBehaviour(new BookNegotiator(bookTitle, acceptablePrice, this));
@@ -213,6 +217,8 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		
 		public void setFinished() {
 			finished = true;
+			// stop this behaviour
+			stop();
 		}
 		public boolean isFinished() {
 			return finished;
@@ -243,13 +249,13 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		/** The "reply with" parameter pattern for the accept proposal messages. */
 		private static final String RW_AP = "order%d";
 		/** The usual message deadline which sellers have to reply by. */
-		private static final long MSG_DEADLINE = 30 * 1000;
+		private static final long MSG_DEADLINE = 3 * 1000;
 		/** What to tell the user if there was a successful purchase. */
-		private static final String SUCCESS_MSG = "Book %s was bought for %d.";
+		private static final String SUCCESS_MSG = "Book %s was bought for %.2f.";
 		
 		// book stuff
 		private String bookTitle;
-		private int price;
+		private double price;
 		private PurchaseManager pm;
 		
 		// structure & logic stuff
@@ -259,9 +265,9 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		
 		// proposal stuff
 		private AID bestBidder;
-		private int bestPrice;
+		private double bestPrice;
 		
-		public BookNegotiator(String bookTitle, int acceptablePrice, PurchaseManager pm) {
+		public BookNegotiator(String bookTitle, double acceptablePrice, PurchaseManager pm) {
 			super();
 			
 			// save the given arguments
@@ -273,7 +279,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		@Override
 		public void onStart() {
 			// inform the user of what we're doing
-			gui.notifyUser("Trying to buy " + bookTitle + " at $" + price + ".");
+			gui.notifyUser(String.format("Trying to buy %s at $%.2f.", bookTitle, price));
 			
 			// initially, we're in the start state
 			state = NegotiatorState.START;	
@@ -343,10 +349,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 			// update the template we're expecting
 			template = MessageTemplate.and(
 						MessageTemplate.MatchPerformative(ACLMessage.PROPOSE),
-						MessageTemplate.and(
-							MessageTemplate.MatchConversationId(CONV_ID),
-							MessageTemplate.MatchReplyWith(cfp.getReplyWith())
-						)								
+						MessageTemplate.MatchInReplyTo(cfp.getReplyWith())
 					);
 			
 			// change to the next state
@@ -379,7 +382,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 				
 				try {
 					// get the actual proposal price
-					int proposalPrice = Integer.parseInt(proposalMsg.getContent());
+					double proposalPrice = Double.parseDouble(proposalMsg.getContent());
 					
 					// if its the first proposal, or it beats the best proposal
 					if(bestBidder == null || proposalPrice <= bestPrice) {
@@ -393,9 +396,9 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 					return;
 				}
 			// once the deadline has expired
-			} else {
+			} else {				
 				// if we don't have a valid best proposal
-				if(bestBidder == null || bestPrice > price) {
+				if(bestBidder == null || bestPrice > price) {					
 					// then we're done
 					state = NegotiatorState.FINISHED;
 					return;
@@ -430,10 +433,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 					// update the template we're expecting
 					template = MessageTemplate.and(
 								MessageTemplate.MatchSender(bestBidder),
-								MessageTemplate.and(
-									MessageTemplate.MatchConversationId(CONV_ID),
-									MessageTemplate.MatchReplyWith(ap.getReplyWith())
-								)								
+								MessageTemplate.MatchInReplyTo(ap.getReplyWith())
 							);
 					
 					// move to the next state

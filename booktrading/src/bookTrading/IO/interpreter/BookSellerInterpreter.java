@@ -30,8 +30,8 @@ public class BookSellerInterpreter implements BookAgentInterpreter {
 			try {
 				// get the components
 				String title = tokens[1];
-				int initPrice = Integer.parseInt(tokens[2]);
-				int minPrice = Integer.parseInt(tokens[3]);
+				double initPrice = Double.parseDouble(tokens[2]);
+				double minPrice = Double.parseDouble(tokens[3]);
 				long deadline = Long.parseLong(tokens[4]);
 				// start a sale
 				seller.sell(
@@ -41,7 +41,7 @@ public class BookSellerInterpreter implements BookAgentInterpreter {
 							new Date(System.currentTimeMillis() + deadline * 1000)
 						);
 			} catch(Exception e) {
-				e.printStackTrace(System.err);
+				//e.printStackTrace(System.err);
 			}
 		}
 

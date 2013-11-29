@@ -1,8 +1,7 @@
-package bookTrading.behaviours;
+package completelyIrrelevant;
 
 import java.math.BigInteger;
 
-import completelyIrrelevant.Callback;
 
 
 import jade.core.behaviours.Behaviour;
