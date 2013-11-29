@@ -20,7 +20,7 @@ public class BookInfo implements Serializable {
 	/**
 	 * A BookInfo for a buyer agent.
 	 */
-	public BookInfo(String title, Date deadline, int maxPrice) {
+	public BookInfo(String title, int maxPrice, Date deadline) {
 		this.title = title;
 		this.deadline = deadline;
 
@@ -29,7 +29,7 @@ public class BookInfo implements Serializable {
 	/**
 	 * A BookInfo for a seller agent.
 	 */
-	public BookInfo(String title, Date deadline, int initPrice, int minPrice) {
+	public BookInfo(String title, int initPrice, int minPrice, Date deadline) {
 		this.title = title;
 		this.deadline = deadline;
 		

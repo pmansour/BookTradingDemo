@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import bookTrading.IO.gui.BookAgentGUI;
+import bookTrading.IO.gui.BookBuyerGUI;
 import bookTrading.common.BookInfo;
 import bookTrading.common.Proposal;
 import bookTrading.seller.BookSellerAgent;
@@ -21,7 +23,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 
-public class BookBuyerAgent extends Agent {
+public class BookBuyerAgent extends Agent implements BookBuyer{
 	private static final long serialVersionUID = -2179361359046163266L;
 	
 	private static final long REFRESH_SELLERS_INTERVAL = 60 * 1000;
@@ -29,7 +31,7 @@ public class BookBuyerAgent extends Agent {
 	// the agents that are selling books
 	private List<AID> sellers;
 	// the GUI that shows the state of this buyer
-	private BookBuyerGUI gui;
+	private BookAgentGUI gui;
 	
 	@Override
 	protected void setup() {
@@ -53,7 +55,7 @@ public class BookBuyerAgent extends Agent {
 		startExternalController();
 		
 		// start the GUI
-		gui = new BookBuyerGUITextReadOnly(this);
+		gui = new BookBuyerGUI(this);
 		gui.show();
 	}
 	@Override
@@ -81,7 +83,7 @@ public class BookBuyerAgent extends Agent {
 				BookInfo info = (BookInfo) myAgent.getO2AObject();
 				// if we have one, process it; otherwise, block
 				if(info != null) {
-					purchase(info.getTitle(), info.getMaxPrice(), info.getDeadline());
+					buy(info.getTitle(), info.getMaxPrice(), info.getDeadline());
 				} else {
 					block();
 				}
@@ -121,10 +123,14 @@ public class BookBuyerAgent extends Agent {
 						sellers.add(result.getName());
 					}
 					// [debug message]
-					gui.notifyUser("Updated list of sellers:");
+					StringBuilder sb = new StringBuilder();
+					sb.append("Updated list of sellers: {");
 					for(AID seller : sellers) {
-						System.err.println("-> " + seller.getLocalName());
+						sb.append(seller.getLocalName());
+						sb.append(';');
 					}
+					sb.append('}');
+					gui.notifyUser(sb.toString());
 				} catch(FIPAException fe) {
 					fe.printStackTrace(System.err);
 				}
@@ -138,9 +144,9 @@ public class BookBuyerAgent extends Agent {
 	/**
 	 * Start looking for a new book to purchase.
 	 */
-	public void purchase(String bookTitle, int maxPrice, Date deadline) {
+	public void buy(String bookTitle, int maxPrice, Date deadline) {
 		addBehaviour(new PurchaseManager(this, bookTitle, maxPrice, deadline));
-		// confirm the new purchase task
+		// echo the new purchase task
 		gui.notifyUser(String.format(CONFIRM_PURCHASE,
 					bookTitle,
 					maxPrice,
@@ -162,7 +168,7 @@ public class BookBuyerAgent extends Agent {
 		/** How often to wake up and increase the price. */
 		private static final long TICK_INTERVAL = 60000;
 		/** What to tell the user if the book can't be purchased. */
-		private static final String FAIL_MSG = "Cannot buy book %s";
+		private static final String FAIL_MSG = "Could not buy book %s before the deadline.";
 		
 		private String bookTitle;
 		private int maxPrice;
@@ -266,6 +272,9 @@ public class BookBuyerAgent extends Agent {
 		
 		@Override
 		public void onStart() {
+			// inform the user of what we're doing
+			gui.notifyUser("Trying to buy " + bookTitle + " at $" + price + ".");
+			
 			// initially, we're in the start state
 			state = NegotiatorState.START;	
 			
@@ -308,7 +317,7 @@ public class BookBuyerAgent extends Agent {
 		 * -> Record the time it was sent and effectively "count down".
 		 * -> Update the template to receive, so we only care about PROPOSE.
 		 */
-		private void START() {
+		private void START() {			
 			// create a CFP message
 			ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
 			
@@ -339,6 +348,9 @@ public class BookBuyerAgent extends Agent {
 							MessageTemplate.MatchReplyWith(cfp.getReplyWith())
 						)								
 					);
+			
+			// change to the next state
+			state = NegotiatorState.WAITING_FOR_PROPOSALS;
 		}
 		
 		/**
@@ -424,6 +436,8 @@ public class BookBuyerAgent extends Agent {
 								)								
 							);
 					
+					// move to the next state
+					state = NegotiatorState.WAITING_FOR_CONFIRMATION;
 				}
 			}
 		}

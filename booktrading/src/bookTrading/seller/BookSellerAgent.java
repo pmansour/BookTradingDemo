@@ -4,6 +4,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import bookTrading.IO.gui.BookAgentGUI;
+import bookTrading.IO.gui.BookSellerGUI;
 import bookTrading.common.BookInfo;
 import bookTrading.common.Proposal;
 
@@ -18,7 +20,7 @@ import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import jade.lang.acl.UnreadableException;
 
-public class BookSellerAgent extends Agent {
+public class BookSellerAgent extends Agent implements BookSeller {
 	private static final long serialVersionUID = 408650196499616944L;
 	
 	public static final String BS_SERVICE_TYPE = "Book-Selling";
@@ -26,7 +28,7 @@ public class BookSellerAgent extends Agent {
 	/** The catalogue of books currently on sale. */
 	private Map<String, PriceManager> catalogue;
 	/** The GUI controlling user interaction. */
-	private BookSellerGUI gui;
+	private BookAgentGUI gui;
 	
 	@Override
 	protected void setup() {
@@ -43,7 +45,7 @@ public class BookSellerAgent extends Agent {
 		startExternalController();
 		
 		// start and show a new GUI
-		gui = new BookSellerGUITextReadOnly(this);
+		gui = new BookSellerGUI(this);
 		gui.show();
 		
 		// start the two behaviour servers:
@@ -80,7 +82,7 @@ public class BookSellerAgent extends Agent {
 				BookInfo info = (BookInfo) myAgent.getO2AObject();
 				// if we have one, process it; otherwise, block
 				if(info != null) {
-					putForSale(info.getTitle(), info.getInitPrice(), info.getMinPrice(), info.getDeadline());
+					sell(info.getTitle(), info.getInitPrice(), info.getMinPrice(), info.getDeadline());
 				} else {
 					block();
 				}
@@ -111,8 +113,12 @@ public class BookSellerAgent extends Agent {
 		// finally, register the service with the DF
 		try {
 			DFService.register(this, dfd);
+			// inform the user
+			gui.notifyUser("Registered in the DF for " + service.getName());
 		} catch(FIPAException fe) {
 			fe.printStackTrace(System.err);
+			// inform the user
+			gui.notifyUser("Could not register in the DF!");
 		}
 	}
 	
@@ -122,8 +128,12 @@ public class BookSellerAgent extends Agent {
 	private void deregisterServices() {
 		try {
 			DFService.deregister(this);
+			// inform the user
+			gui.notifyUser("Registered from the DF.");
 		} catch(FIPAException fe) {
 			fe.printStackTrace(System.err);
+			// inform the user
+			gui.notifyUser("Could not deregister from the DF.");
 		}
 	}
 	
@@ -132,9 +142,9 @@ public class BookSellerAgent extends Agent {
 	/**
 	 * Put a new book up for sale.
 	 */
-	public void putForSale(String bookTitle, int initPrice, int minPrice, Date deadline) {
+	public void sell(String bookTitle, int initPrice, int minPrice, Date deadline) {
 		addBehaviour(new PriceManager(this, bookTitle, initPrice, minPrice, deadline));
-		// confirm the new sale task
+		// echo the new sale task
 		gui.notifyUser(String.format(CONFIRM_SALE,
 					bookTitle,
 					initPrice,
@@ -157,7 +167,7 @@ public class BookSellerAgent extends Agent {
 		/** How often to wake up and decrease the price. */
 		private static final long TICKER_INTERVAL = 60000;
 		/** What to tell the user when we can't sell the book by the given deadline. */
-		private static final String EXPR_MSG = "Cannot sell the book %s.";
+		private static final String EXPR_MSG = "Could not sell the book %s before the deadline.";
 
 		private String bookTitle;
 		private int initPrice, currentPrice, deltaP;
@@ -202,6 +212,8 @@ public class BookSellerAgent extends Agent {
 				// work out the current price
 				long elapsedTime = currentTime - initTime;
 				currentPrice = initPrice - deltaP * (int) (elapsedTime / deltaT);
+				// inform the user of the new price
+				gui.notifyUser("Now accepting $" + currentPrice + " for " + bookTitle + ".");
 			}
 		}
 		
