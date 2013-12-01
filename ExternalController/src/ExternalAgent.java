@@ -8,10 +8,6 @@ import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
 import jade.wrapper.StaleProxyException;
 
-import jade.core.Profile;
-import jade.core.ProfileImpl;
-import jade.core.Runtime;
-
 public class ExternalAgent implements BookBuyer, BookSeller {
 	public static final String BUYER_CLASS_NAME = "bookTrading.buyer.BookBuyerAgent";
 	public static final String SELLER_CLASS_NAME = "bookTrading.seller.BookSellerAgent";
@@ -25,32 +21,6 @@ public class ExternalAgent implements BookBuyer, BookSeller {
 	public ExternalAgent(ContainerController container, String agentName, String agentClass) {
 		this.container = container;
 		startAgent(agentName, agentClass);
-	}
-	/**
-	 * Start the agent on a new container.
-	 */
-	public ExternalAgent(String host, String port, boolean main, String agentName, String agentClass) {
-		this.container = startContainer(host, port, main);
-		startAgent(agentName, agentClass);
-	}
-	
-	/**
-	 * Start a new container with the given settings.
-	 * @param host The host at which the main container lives.
-	 * @param port The port at which the main container lives.
-	 * @param main Whether we should start a main or an agent container.
-	 */
-	public static ContainerController startContainer(String host, String port, boolean main) {
-		// get the JADE runtime singleton instance
-		Runtime rt = Runtime.instance();
-		
-		// prepare the settings for the platform that we want to get onto
-		Profile p = new ProfileImpl();
-		p.setParameter(Profile.MAIN_HOST, host);
-		p.setParameter(Profile.MAIN_PORT, port);
-		
-		// create a container for the book buyer agent
-		return main ? rt.createMainContainer(p) : rt.createAgentContainer(p);		 
 	}
 	
 	/**

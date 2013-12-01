@@ -298,7 +298,7 @@ public class BookSellerAgent extends Agent implements BookSeller {
 		private static final long serialVersionUID = 5093118259000491987L;
 
 		/** What to tell the user when an item has been sold successfully. */
-		private static final String SUCCESS_MSG = "Book %s has been sold for %.2f.";
+		private static final String SUCCESS_MSG = "Book %s has been sold for $%.2f.";
 		
 		// we only care about Accept Proposal messages
 		private MessageTemplate template =

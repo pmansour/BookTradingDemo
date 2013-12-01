@@ -251,7 +251,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		/** The usual message deadline which sellers have to reply by. */
 		private static final long MSG_DEADLINE = 3 * 1000;
 		/** What to tell the user if there was a successful purchase. */
-		private static final String SUCCESS_MSG = "Book %s was bought for %.2f.";
+		private static final String SUCCESS_MSG = "Book %s was bought for $%.2f.";
 		
 		// book stuff
 		private String bookTitle;

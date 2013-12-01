@@ -4,5 +4,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JADE"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/booktrading"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Commons-CLI"/>
 	<classpathentry kind="output" path="classes"/>
 </classpath>
