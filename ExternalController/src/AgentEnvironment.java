@@ -153,9 +153,6 @@ public class AgentEnvironment {
 	
 	/**
 	 * Start a new container with the given settings.
-	 * @param main Whether we should start a main or an agent container.
-	 * @param host The host at which the main container lives.
-	 * @param port The port at which the main container lives.
 	 */
 	public static ContainerController startContainer(
 			boolean agent, String mainHost, String mainPort,
@@ -167,11 +164,11 @@ public class AgentEnvironment {
 		Profile p = new ProfileImpl();
 		p.setParameter(Profile.MAIN_HOST, mainHost);
 		p.setParameter(Profile.MAIN_PORT, mainPort);
-		p.setParameter(Profile.LOCAL_HOST, localHost);
-		p.setParameter(Profile.LOCAL_PORT, localPort);
+		//p.setParameter(Profile.LOCAL_HOST, localHost);
+		//p.setParameter(Profile.LOCAL_PORT, localPort);
 		
-		// create a container for the book buyer agent
-		return agent ? rt.createAgentContainer(p) : rt.createMainContainer(p);		 
+		// create and return a container
+		return agent ? rt.createAgentContainer(p) : rt.createMainContainer(p);
 	}
 
 	public static void main(String[] args) {
