@@ -222,6 +222,9 @@ public class AgentEnvironment {
 						// do nothing
 					}
 				}
+				
+				// close the scanner
+				s.close();
 			}
 			
 		}).start();
