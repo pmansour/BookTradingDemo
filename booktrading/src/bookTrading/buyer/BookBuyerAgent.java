@@ -309,6 +309,9 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 					// the purchase if it gets confirmed.
 					WFC();
 					break;
+				case FINISHED:
+					// do nothing
+					break;
 			}
 		}
 		@Override
