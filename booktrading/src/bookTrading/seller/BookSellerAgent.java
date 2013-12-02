@@ -7,8 +7,16 @@ import java.util.Map;
 import bookTrading.IO.gui.BookAgentGUI;
 import bookTrading.IO.gui.BookSellerGUI;
 import bookTrading.common.BookInfo;
-import bookTrading.common.Proposal;
+import bookTrading.ontology.Book;
+import bookTrading.ontology.BookTradingOntology;
+import bookTrading.ontology.Costs;
+import bookTrading.ontology.Sell;
 
+import jade.content.ContentManager;
+import jade.content.lang.Codec;
+import jade.content.lang.sl.SLCodec;
+import jade.content.onto.Ontology;
+import jade.content.onto.basic.Action;
 import jade.core.Agent;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
@@ -18,17 +26,20 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import jade.lang.acl.UnreadableException;
 
 public class BookSellerAgent extends Agent implements BookSeller {
 	private static final long serialVersionUID = 408650196499616944L;
 	
 	public static final String BS_SERVICE_TYPE = "Book-Selling";
 
-	/** The catalogue of books currently on sale. */
+	// The catalogue of books currently on sale.
 	private Map<String, PriceManager> catalogue;
-	/** The GUI controlling user interaction. */
+	// The GUI controlling user interaction.
 	private BookAgentGUI gui;
+	
+	// this agent's language/ontology
+	private Codec codec;
+	private Ontology ontology;
 	
 	@Override
 	protected void setup() {
@@ -36,9 +47,16 @@ public class BookSellerAgent extends Agent implements BookSeller {
 		gui = new BookSellerGUI(this);
 		gui.show();
 		
+		// register the acceptable content language and ontology
+		codec = new SLCodec();
+		ontology = BookTradingOntology.getInstance();
+		
+		getContentManager().registerLanguage(codec);
+		getContentManager().registerOntology(ontology);
+		
 		// initialize the catalogue
 		catalogue = new HashMap<String, PriceManager>();
-				
+
 		// register this agent's service(s) with the DF
 		registerServices();
 
@@ -79,7 +97,7 @@ public class BookSellerAgent extends Agent implements BookSeller {
 				BookInfo info = (BookInfo) myAgent.getO2AObject();
 				// if we have one, process it; otherwise, block
 				if(info != null) {
-					sell(info.getTitle(), info.getInitPrice(), info.getMinPrice(), info.getDeadline());
+					sell(info.getBook(), info.getInitPrice(), info.getMinPrice(), info.getDeadline());
 				} else {
 					block();
 				}
@@ -139,11 +157,11 @@ public class BookSellerAgent extends Agent implements BookSeller {
 	/**
 	 * Put a new book up for sale.
 	 */
-	public void sell(String bookTitle, double initPrice, double minPrice, Date deadline) {
-		addBehaviour(new PriceManager(this, bookTitle, initPrice, minPrice, deadline));
+	public void sell(Book book, double initPrice, double minPrice, Date deadline) {
+		addBehaviour(new PriceManager(this, book, initPrice, minPrice, deadline));
 		// echo the new sale task
 		gui.notifyUser(String.format(CONFIRM_SALE,
-					bookTitle,
+					book.toString(),
 					initPrice,
 					minPrice,
 					deadline.toString()
@@ -162,19 +180,19 @@ public class BookSellerAgent extends Agent implements BookSeller {
 		private static final long serialVersionUID = -5667551287935590044L;
 		
 		/** How often to wake up and decrease the price. */
-		private static final long TICKER_INTERVAL = 10 * 1000;
+		private static final long TICKER_INTERVAL = 3 * 1000;
 		/** What to tell the user when we can't sell the book by the given deadline. */
 		private static final String EXPR_MSG = "Could not sell the book %s before the deadline.";
 
-		private String bookTitle;
+		private Book book;
 		private double initPrice, minPrice, currentPrice, deltaP;
 		private long initTime, deadline, deltaT;
 		
-		public PriceManager(Agent agent, String bookTitle, double initPrice, double minPrice, Date deadline) {
+		public PriceManager(Agent agent, Book book, double initPrice, double minPrice, Date deadline) {
 			super(agent, TICKER_INTERVAL);
 			
 			// save the given arguments
-			this.bookTitle = bookTitle;
+			this.book= book;
 			this.initPrice = initPrice;
 			this.minPrice = minPrice;
 			this.deadline = deadline.getTime();
@@ -191,7 +209,7 @@ public class BookSellerAgent extends Agent implements BookSeller {
 		@Override
 		public void onStart() {
 			// add the book to the seller agent's catalogue
-			catalogue.put(bookTitle, this);
+			catalogue.put(book.toString(), this);
 			super.onStart();
 		}
 
@@ -201,9 +219,9 @@ public class BookSellerAgent extends Agent implements BookSeller {
 			// if the deadline expired
 			if(currentTime > deadline) {
 				// the book is no longer on sale
-				catalogue.remove(bookTitle);
+				catalogue.remove(book.toString());
 				// notify the user
-				gui.notifyUser(String.format(EXPR_MSG, bookTitle));
+				gui.notifyUser(String.format(EXPR_MSG, book.toString()));
 				// this behaviour is now useless
 				stop();
 			} else {
@@ -215,7 +233,7 @@ public class BookSellerAgent extends Agent implements BookSeller {
 					currentPrice = minPrice;
 				}
 				// inform the user of the new price
-				gui.notifyUser(String.format("Now accepting $%.2f for %s.", currentPrice, bookTitle));
+				gui.notifyUser(String.format("Now accepting $%.2f for %s.", currentPrice, book.toString()));
 			}
 		}
 		
@@ -254,24 +272,41 @@ public class BookSellerAgent extends Agent implements BookSeller {
 				return;
 			}
 			
-			// process the message
-			String title = msg.getContent();
+			// we're gonna reply no matter what
 			ACLMessage reply = msg.createReply();
 			
-			PriceManager pm = (PriceManager) catalogue.get(title);
-			
-			// if we have the book
-			if(pm != null) {
-				// reply with a proposal
-				reply.setPerformative(ACLMessage.PROPOSE);
-				reply.setContent(String.valueOf(pm.getCurrentPrice()));
-			// if we don't
-			} else {
-				// reply with a REFUSE
-				reply.setPerformative(ACLMessage.REFUSE);				
+			// process the message
+			try {
+				// process the book using the BookTradingOntology
+				ContentManager cm = myAgent.getContentManager();
+				Action act = (Action) cm.extractContent(msg);
+				Sell sellAction = (Sell) act.getAction();
+				Book book = sellAction.getItem();
+				
+				// look for it it in our catalogue
+				PriceManager pm = catalogue.get(book.toString());
+				
+				// if we have the book
+				if(pm != null) {
+					// create a new predicate with the book's cost
+					Costs costs = new Costs();
+					costs.setItem(book);
+					costs.setPrice(pm.getCurrentPrice());
+										
+					// reply with the proposal
+					reply.setPerformative(ACLMessage.PROPOSE);
+					cm.fillContent(reply, costs);
+				// if we don't
+				} else {
+					// reply with a REFUSE
+					reply.setPerformative(ACLMessage.REFUSE);				
+				}
+			} catch(Exception e) {
+				e.printStackTrace(System.err);
+				reply.setPerformative(ACLMessage.NOT_UNDERSTOOD);
 			}
 			
-			// send the reply
+			// send the reply in any case
 			myAgent.send(reply);
 		}
 		
@@ -319,9 +354,10 @@ public class BookSellerAgent extends Agent implements BookSeller {
 			
 			try {
 				// get the proposal which the buyer is accepting
-				Proposal proposal = (Proposal) msg.getContentObject();
+				Costs proposal = (Costs) getContentManager().extractContent(msg);
+				
 				// get the price manager for the concerned book
-				PriceManager pm = (PriceManager) catalogue.get(proposal.getBookTitle());
+				PriceManager pm = (PriceManager) catalogue.get(proposal.getItem().toString());
 
 				// if we still have the book and the proposal price is valid
 				if(pm != null && pm.getCurrentPrice() <= proposal.getPrice()) {
@@ -330,16 +366,16 @@ public class BookSellerAgent extends Agent implements BookSeller {
 					// stop the price manager for this book
 					pm.stop();
 					// remove the book from the catalogue
-					catalogue.remove(proposal.getBookTitle());
+					catalogue.remove(proposal.getItem().toString());
 					// notify the user of success
-					gui.notifyUser(String.format(SUCCESS_MSG, proposal.getBookTitle(), proposal.getPrice()));
+					gui.notifyUser(String.format(SUCCESS_MSG, proposal.getItem().getTitle(), proposal.getPrice()));
 				// otherwise
 				} else {
 					// reply with a disconfirmation
 					reply.setPerformative(ACLMessage.DISCONFIRM);				
 				}
 			// if we weren't sent back a proper proposal
-			} catch (UnreadableException e) {
+			} catch (Exception e) {
 				// send a not understood reply we didn't get back a Proposal content
 				reply.setPerformative(ACLMessage.NOT_UNDERSTOOD);
 			}

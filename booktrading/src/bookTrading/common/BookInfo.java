@@ -3,11 +3,13 @@ package bookTrading.common;
 import java.io.Serializable;
 import java.util.Date;
 
+import bookTrading.ontology.Book;
+
 public class BookInfo implements Serializable {
 	private static final long serialVersionUID = -3242193306082354418L;
 	
 	// general stuff
-	private String title;
+	private Book book;
 	private Date deadline;
 	
 	// for buyer agents
@@ -20,8 +22,8 @@ public class BookInfo implements Serializable {
 	/**
 	 * A BookInfo for a buyer agent.
 	 */
-	public BookInfo(String title, double maxPrice, Date deadline) {
-		this.title = title;
+	public BookInfo(Book book, double maxPrice, Date deadline) {
+		this.book = book;
 		this.deadline = deadline;
 
 		this.maxPrice = maxPrice;
@@ -29,16 +31,16 @@ public class BookInfo implements Serializable {
 	/**
 	 * A BookInfo for a seller agent.
 	 */
-	public BookInfo(String title, double initPrice, double minPrice, Date deadline) {
-		this.title = title;
+	public BookInfo(Book book, double initPrice, double minPrice, Date deadline) {
+		this.book = book;
 		this.deadline = deadline;
 		
 		this.initPrice = initPrice;
 		this.minPrice = minPrice;
 	}
 	
-	public String getTitle() {
-		return title;
+	public Book getBook() {
+		return book;
 	}
 	public Date getDeadline() {
 		return deadline;

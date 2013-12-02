@@ -3,8 +3,9 @@ package bookTrading.IO.interpreter;
 import java.util.Date;
 
 import bookTrading.buyer.BookBuyer;
+import bookTrading.ontology.Book;
 
-public class BookBuyerInterpreter implements BookAgentInterpreter {
+public class BookBuyerInterpreter extends BookAgentInterpreter {
 	
 	static String EXIT_CODE = "-1";
 	
@@ -16,7 +17,7 @@ public class BookBuyerInterpreter implements BookAgentInterpreter {
 
 	@Override
 	public boolean interpret(String line) {
-		// if it's the exit code then exit
+		// if it's the exit code then stop the interpreter
 		if(line.equalsIgnoreCase(EXIT_CODE)) {
 			return false;
 		}
@@ -29,22 +30,27 @@ public class BookBuyerInterpreter implements BookAgentInterpreter {
 		if(command.equalsIgnoreCase("buy")) {
 			try {
 				// get the components
-				String title = tokens[1];
+				Book book = interpretBook(tokens[1]);
 				double maxPrice = Double.parseDouble(tokens[2]);
 				long deadline = Long.parseLong(tokens[3]);
+				
 				// start a purchase
 				buyer.buy(
-							title,
+							book,
 							maxPrice,
 							new Date(System.currentTimeMillis() + deadline * 1000)
 						);
 			} catch(Exception e) {
-				//e.printStackTrace(System.err);
+				// we don't care about malformed commands
 			}
 		}
 
 		// continue interpreting
 		return true;
+	}
+
+	public static String getUsageMessage() {
+		return "buy,[bookTitle;author1&author2&author3;bookEditor],[maximum price],[deadline (in seconds)]";
 	}
 
 }

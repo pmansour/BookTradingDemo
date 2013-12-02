@@ -1,5 +1,6 @@
 package bookTrading.IO.gui;
 
+import bookTrading.IO.interpreter.BookSellerInterpreter;
 import jade.core.Agent;
 
 public class BookSellerGUI extends BookAgentGUI {
@@ -16,7 +17,7 @@ public class BookSellerGUI extends BookAgentGUI {
 	@Override
 	protected void printUsageMessage() {
 		notifyUser("To sell a book, please enter a line in the following form:");
-		notifyUser("sell,[book title],[initial price],[minimum price],[deadline (in seconds)]");
+		notifyUser(BookSellerInterpreter.getUsageMessage());
 	}
 
 }

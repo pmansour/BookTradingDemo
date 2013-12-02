@@ -195,27 +195,31 @@ public class AgentEnvironment {
 				// keep interpreting until there's no more input, or until
 				// neither agents want to continue
 				while(s.hasNextLine() && continuePolling) {
-					// get the next line
-					String line = s.nextLine();
-					
-					// if the line includes a colon (:)
-					if(line.contains(":")) {
-						// split it at the colon
-						String[] tokens = line.split(":");
+					try {
+						// get the next line
+						String line = s.nextLine();
 						
-						// the first token should say which agent is meant by this message
-						String agent = tokens[0].toLowerCase();
-						
-						// let the agent meant by it interpret it
-						continuePolling = interpreters.get(agent).interpret(tokens[1]);
-					// otherwise
-					} else {
-						// let all the agents interpret it
-						for(BookAgentInterpreter interpreter : interpreters.values()) {
-							if(!interpreter.interpret(line)) {
-								continuePolling = false;
+						// if the line includes a colon (:)
+						if(line.contains(":")) {
+							// split it at the colon
+							String[] tokens = line.split(":");
+							
+							// the first token should say which agent is meant by this message
+							String agent = tokens[0].toLowerCase();
+							
+							// let the agent meant by it interpret it
+							continuePolling = interpreters.get(agent).interpret(tokens[1]);
+						// otherwise
+						} else {
+							// let all the agents interpret it
+							for(BookAgentInterpreter interpreter : interpreters.values()) {
+								if(!interpreter.interpret(line)) {
+									continuePolling = false;
+								}
 							}
 						}
+					} catch(Exception e) {
+						// do nothing
 					}
 				}
 			}

@@ -2,6 +2,7 @@ import java.util.Date;
 
 import bookTrading.buyer.BookBuyer;
 import bookTrading.common.BookInfo;
+import bookTrading.ontology.Book;
 import bookTrading.seller.BookSeller;
 
 import jade.wrapper.AgentController;
@@ -41,8 +42,8 @@ public class ExternalAgent implements BookBuyer, BookSeller {
 	/**
 	 * Only applicable for buyer agents. Send a BookInfo object to the agent.
 	 */
-	public void buy(String title, double maxPrice, Date deadline) {
-		BookInfo info = new BookInfo(title, maxPrice, deadline);
+	public void buy(Book book, double maxPrice, Date deadline) {
+		BookInfo info = new BookInfo(book, maxPrice, deadline);
 		try {
 			agent.putO2AObject(info, false);
 		} catch (StaleProxyException e) {
@@ -52,8 +53,8 @@ public class ExternalAgent implements BookBuyer, BookSeller {
 	/**
 	 * Only applicable for seller agents. Send a BookInfo object to the agent.
 	 */
-	public void sell(String title, double initPrice, double minPrice, Date deadline) {
-		BookInfo info = new BookInfo(title, initPrice, minPrice, deadline);
+	public void sell(Book book, double initPrice, double minPrice, Date deadline) {
+		BookInfo info = new BookInfo(book, initPrice, minPrice, deadline);
 		try {
 			agent.putO2AObject(info, false);
 		} catch (StaleProxyException e) {

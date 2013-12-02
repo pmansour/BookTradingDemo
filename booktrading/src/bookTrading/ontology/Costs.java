@@ -6,7 +6,7 @@ public class Costs implements Predicate {
 	private static final long serialVersionUID = 3029124398241862427L;
 
 	private Book item;
-	private int price;
+	private double price;
 	
 	public Book getItem() {
 		return item;
@@ -14,10 +14,10 @@ public class Costs implements Predicate {
 	public void setItem(Book item) {
 		this.item = item;
 	}
-	public int getPrice() {
+	public double getPrice() {
 		return price;
 	}
-	public void setPrice(int price) {
+	public void setPrice(double price) {
 		this.price = price;
 	}
 	

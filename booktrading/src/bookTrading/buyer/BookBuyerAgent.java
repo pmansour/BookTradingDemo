@@ -1,6 +1,5 @@
 package bookTrading.buyer;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -8,9 +7,16 @@ import java.util.List;
 import bookTrading.IO.gui.BookAgentGUI;
 import bookTrading.IO.gui.BookBuyerGUI;
 import bookTrading.common.BookInfo;
-import bookTrading.common.Proposal;
+import bookTrading.ontology.Book;
+import bookTrading.ontology.BookTradingOntology;
+import bookTrading.ontology.Costs;
+import bookTrading.ontology.Sell;
 import bookTrading.seller.BookSellerAgent;
 
+import jade.content.lang.Codec;
+import jade.content.lang.sl.SLCodec;
+import jade.content.onto.Ontology;
+import jade.content.onto.basic.Action;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.Behaviour;
@@ -18,6 +24,7 @@ import jade.core.behaviours.CyclicBehaviour;
 import jade.core.behaviours.TickerBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAException;
+import jade.domain.FIPANames;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.lang.acl.ACLMessage;
@@ -26,18 +33,30 @@ import jade.lang.acl.MessageTemplate;
 public class BookBuyerAgent extends Agent implements BookBuyer{
 	private static final long serialVersionUID = -2179361359046163266L;
 	
-	private static final long REFRESH_SELLERS_INTERVAL = 60 * 1000;
+	private static final long REFRESH_SELLERS_INTERVAL = 30 * 1000;
 
 	// the agents that are selling books
 	private List<AID> sellers;
 	// the GUI that shows the state of this buyer
 	private BookAgentGUI gui;
 	
+	// this agent's language/ontology
+	private Codec codec;
+	private Ontology ontology;
+	
 	@Override
 	protected void setup() {
 		// start the GUI
 		gui = new BookBuyerGUI(this);
 		gui.show();
+		
+		// register the acceptable content language and ontology
+		codec = new SLCodec();
+		ontology = BookTradingOntology.getInstance();
+		
+		getContentManager().registerLanguage(codec);
+		getContentManager().registerOntology(ontology);
+		
 		
 		// start refreshing the list of sellers every now and then
 		startRefreshingSellers();
@@ -70,7 +89,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 				BookInfo info = (BookInfo) myAgent.getO2AObject();
 				// if we have one, process it; otherwise, block
 				if(info != null) {
-					buy(info.getTitle(), info.getMaxPrice(), info.getDeadline());
+					buy(info.getBook(), info.getMaxPrice(), info.getDeadline());
 				} else {
 					block();
 				}
@@ -121,15 +140,6 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 					for(DFAgentDescription result : results) {
 						sellers.add(result.getName());
 					}
-					/*// [debug message]
-					StringBuilder sb = new StringBuilder();
-					sb.append("Updated list of sellers: {");
-					for(AID seller : sellers) {
-						sb.append(seller.getLocalName());
-						sb.append(';');
-					}
-					sb.append('}');
-					gui.notifyUser(sb.toString());*/
 				} catch(FIPAException fe) {
 					fe.printStackTrace(System.err);
 				}
@@ -143,11 +153,11 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 	/**
 	 * Start looking for a new book to purchase.
 	 */
-	public void buy(String bookTitle, double maxPrice, Date deadline) {
-		addBehaviour(new PurchaseManager(this, bookTitle, maxPrice, deadline));
+	public void buy(Book book, double maxPrice, Date deadline) {
+		addBehaviour(new PurchaseManager(this, book, maxPrice, deadline));
 		// echo the new purchase task
 		gui.notifyUser(String.format(CONFIRM_PURCHASE,
-					bookTitle,
+					book,
 					maxPrice,
 					deadline.toString()
 				));
@@ -165,21 +175,21 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		private static final long serialVersionUID = -8246238436156814059L;
 		
 		/** How often to wake up and increase the price. */
-		private static final long TICK_INTERVAL = 10 * 1000;
+		private static final long TICK_INTERVAL = 5 * 1000;
 		/** What to tell the user if the book can't be purchased. */
 		private static final String FAIL_MSG = "Could not buy book %s before the deadline.";
 		
-		private String bookTitle;
+		private Book book;
 		private double maxPrice;
 		private long deadline, initTime, deltaT;
 		
 		private boolean finished;
 		
-		public PurchaseManager(Agent agent, String bookTitle, double maxPrice, Date deadline) {
+		public PurchaseManager(Agent agent, Book book, double maxPrice, Date deadline) {
 			super(agent, TICK_INTERVAL);
 			
 			// save the given arguments
-			this.bookTitle = bookTitle;
+			this.book = book;
 			this.maxPrice = maxPrice;
 			this.deadline = deadline.getTime();
 			
@@ -198,7 +208,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 			// if the deadline expired
 			if(currentTime > deadline) {
 				// tell the user and stop trying
-				gui.notifyUser(String.format(FAIL_MSG, bookTitle));
+				gui.notifyUser(String.format(FAIL_MSG, book.toString()));
 				stop();
 			} else {
 				// work out the acceptable price (max price * desperateness ratio)
@@ -211,7 +221,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 				}
 				
 				// start a new behaviour to get the book at this price
-				myAgent.addBehaviour(new BookNegotiator(bookTitle, acceptablePrice, this));
+				myAgent.addBehaviour(new BookNegotiator(book, acceptablePrice, this));
 			}
 		}
 		
@@ -249,12 +259,12 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		/** The "reply with" parameter pattern for the accept proposal messages. */
 		private static final String RW_AP = "order%d";
 		/** The usual message deadline which sellers have to reply by. */
-		private static final long MSG_DEADLINE = 3 * 1000;
+		private static final long MSG_DEADLINE = 2 * 1000;
 		/** What to tell the user if there was a successful purchase. */
 		private static final String SUCCESS_MSG = "Book %s was bought for $%.2f.";
 		
 		// book stuff
-		private String bookTitle;
+		private Book book;
 		private double price;
 		private PurchaseManager pm;
 		
@@ -265,13 +275,13 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		
 		// proposal stuff
 		private AID bestBidder;
-		private double bestPrice;
+		private Costs bestProposal;
 		
-		public BookNegotiator(String bookTitle, double acceptablePrice, PurchaseManager pm) {
+		public BookNegotiator(Book book, double acceptablePrice, PurchaseManager pm) {
 			super();
 			
 			// save the given arguments
-			this.bookTitle = bookTitle;
+			this.book = book;
 			this.price = acceptablePrice;
 			this.pm = pm;
 		}
@@ -279,14 +289,14 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		@Override
 		public void onStart() {
 			// inform the user of what we're doing
-			gui.notifyUser(String.format("Trying to buy %s at $%.2f.", bookTitle, price));
+			gui.notifyUser(String.format("Trying to buy %s at $%.2f.", book.toString(), price));
 			
 			// initially, we're in the start state
 			state = NegotiatorState.START;	
 			
 			// and we have no bids yet
 			bestBidder = null;
-			bestPrice = -1;
+			bestProposal = null;
 			
 			// and no deadline yet either
 			deadline = 0;
@@ -326,33 +336,58 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		 * -> Record the time it was sent and effectively "count down".
 		 * -> Update the template to receive, so we only care about PROPOSE.
 		 */
-		private void START() {			
-			// create a CFP message
-			ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
+		private void START() {
+			// what the sellers should reply with
+			String replyWith = String.format(RW_CFP, System.currentTimeMillis());
 			
-			// add all the seller agents to the list of receivers
+			// make a custom message for each seller
 			for(AID seller : sellers) {
+				// create a CFP message
+				ACLMessage cfp = new ACLMessage(ACLMessage.CFP);
+			
+				// add the seller
 				cfp.addReceiver(seller);
+			
+				// interpretation stuff
+				cfp.setOntology(BookTradingOntology.getInstance().getName());
+				cfp.setLanguage(FIPANames.ContentLanguage.FIPA_SL);
+			
+				try {
+					// we want a sell action for the book we're looking for				
+					Sell sellAction = new Sell();
+					sellAction.setItem(book);
+	
+					// which is part of an actual action
+					Action act = new Action();
+					act.setAction(sellAction);
+					act.setActor(seller);
+					
+					// put that into the message
+					getContentManager().fillContent(cfp, act);
+				} catch (Exception e) {
+					// print the stack trace
+					e.printStackTrace(System.err);
+					// stop trying to buy this book
+					state = NegotiatorState.FINISHED;
+					return;
+				}
+				
+				// add some identifiers to the message
+				cfp.setConversationId(CONV_ID);
+				cfp.setReplyWith(replyWith);
+				
+				// and a deadline
+				deadline = System.currentTimeMillis() + MSG_DEADLINE;
+				cfp.setReplyByDate(new Date(deadline));
+				
+				// send the message
+				myAgent.send(cfp);
 			}
-			
-			// add the book we're looking for
-			cfp.setContent(bookTitle);
-			
-			// add some identifiers to the message
-			cfp.setConversationId(CONV_ID);
-			cfp.setReplyWith(String.format(RW_CFP, System.currentTimeMillis()));
-			
-			// and a deadline
-			deadline = System.currentTimeMillis() + MSG_DEADLINE;
-			cfp.setReplyByDate(new Date(deadline));
-			
-			// send the message
-			myAgent.send(cfp);
 			
 			// update the template we're expecting
 			template = MessageTemplate.and(
 						MessageTemplate.MatchPerformative(ACLMessage.PROPOSE),
-						MessageTemplate.MatchInReplyTo(cfp.getReplyWith())
+						MessageTemplate.MatchInReplyTo(replyWith)
 					);
 			
 			// change to the next state
@@ -384,24 +419,24 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 				}
 				
 				try {
-					// get the actual proposal price
-					double proposalPrice = Double.parseDouble(proposalMsg.getContent());
+					// get the actual proposal
+					Costs proposal = (Costs) getContentManager().extractContent(proposalMsg);
 					
 					// if its the first proposal, or it beats the best proposal
-					if(bestBidder == null || proposalPrice <= bestPrice) {
+					if(bestBidder == null || bestProposal == null || proposal.getPrice() <= bestProposal.getPrice()) {
 						// now it's the best proposal
 						bestBidder = proposalMsg.getSender();
-						bestPrice = proposalPrice;
+						bestProposal = proposal;
 					}
 					
-				} catch(NumberFormatException e) {
-					// if we get an invalid price, ignore that proposal
+				} catch(Exception e) {
+					// if we get an invalid proposal, ignore it
 					return;
 				}
 			// once the deadline has expired
 			} else {				
 				// if we don't have a valid best proposal
-				if(bestBidder == null || bestPrice > price) {					
+				if(bestBidder == null || bestProposal == null || bestProposal.getPrice() > price) {					
 					// then we're done
 					state = NegotiatorState.FINISHED;
 					return;
@@ -413,11 +448,18 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 					// to the best bidder
 					ap.addReceiver(bestBidder);
 					
+					// using the known technologies
+					ap.setLanguage(FIPANames.ContentLanguage.FIPA_SL);
+					ap.setOntology(BookTradingOntology.getInstance().getName());
+					
 					// with the proposal they made
 					try {
-						ap.setContentObject(new Proposal(bookTitle, bestPrice));
-					} catch (IOException e) {
-						// if we can't send them an AP, then we might as well give up
+						getContentManager().fillContent(ap, bestProposal);
+					} catch (Exception e) {
+						// print the stack trace
+						e.printStackTrace(System.err);
+						
+						// if we can't send them an AP, then we might as well stop
 						state = NegotiatorState.FINISHED;
 						return;
 					}
@@ -474,7 +516,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 					// mark this book as finished in the price manager
 					pm.setFinished();
 					// notify the user of this
-					gui.notifyUser(String.format(SUCCESS_MSG, bookTitle, bestPrice));
+					gui.notifyUser(String.format(SUCCESS_MSG, book.toString(), bestProposal.getPrice()));
 					// our work here is done
 					state = NegotiatorState.FINISHED;
 				// otherwise (if he's saying anything else)

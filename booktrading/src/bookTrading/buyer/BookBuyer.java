@@ -2,8 +2,10 @@ package bookTrading.buyer;
 
 import java.util.Date;
 
+import bookTrading.ontology.Book;
+
 public interface BookBuyer {
 
-	public void buy(String bookTitle, double maxPrice, Date deadline);
+	public void buy(Book book, double maxPrice, Date deadline);
 	
 }

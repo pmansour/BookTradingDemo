@@ -2,9 +2,10 @@ package bookTrading.IO.interpreter;
 
 import java.util.Date;
 
+import bookTrading.ontology.Book;
 import bookTrading.seller.BookSeller;
 
-public class BookSellerInterpreter implements BookAgentInterpreter {
+public class BookSellerInterpreter extends BookAgentInterpreter {
 	
 	static String EXIT_CODE = "-1";
 
@@ -29,24 +30,29 @@ public class BookSellerInterpreter implements BookAgentInterpreter {
 		if(command.equalsIgnoreCase("sell")) {
 			try {
 				// get the components
-				String title = tokens[1];
+				Book book = interpretBook(tokens[1]);
 				double initPrice = Double.parseDouble(tokens[2]);
 				double minPrice = Double.parseDouble(tokens[3]);
 				long deadline = Long.parseLong(tokens[4]);
+				
 				// start a sale
 				seller.sell(
-							title,
+							book,
 							initPrice,
 							minPrice,
 							new Date(System.currentTimeMillis() + deadline * 1000)
 						);
 			} catch(Exception e) {
-				//e.printStackTrace(System.err);
+				// we don't care about malformed commands
 			}
 		}
 
 		// continue interpreting
 		return true;
+	}
+	
+	public static String getUsageMessage() {
+		return "sell,[bookTitle;author1&author2&author3;bookEditor],[initial price],[minimum price],[deadline (in seconds)]";
 	}
 
 }
