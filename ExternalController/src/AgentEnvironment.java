@@ -30,10 +30,6 @@ import bookTrading.IO.interpreter.BookSellerInterpreter;
  * 		localhost)
  * 	-mainport [port]
  * 		the port number of the MAIN container to connect to (default 1099)
- * 	-localhost [hostname]
- * 		the host name at which to start this container (default is localhost)
- * 	-localport [port]
- * 		the port number at which to start this container (default is 1099)
  *	-buyers [buyer1;buyer2]
  *		any buyer agents to instantiate (separated by semi-colons)
  *	-sellers [seller1;seller2]
@@ -49,10 +45,6 @@ public class AgentEnvironment {
 	public static final String L_MAINHOST = "mainhost";
 	public static final String S_MAINPORT = "mp";
 	public static final String L_MAINPORT = "mainport";
-	public static final String S_LOCALHOST = "lh";
-	public static final String L_LOCALHOST = "localhost";
-	public static final String S_LOCALPORT = "lp";
-	public static final String L_LOCALPORT = "localport";
 	public static final String S_BUYERS = "b";
 	public static final String L_BUYERS = "buyers";
 	public static final String S_SELLERS = "s";
@@ -61,8 +53,6 @@ public class AgentEnvironment {
 	public static boolean AGENTCONTAINER = false;
 	public static String MAINHOST = "localhost";
 	public static String MAINPORT = "1099";
-	public static String LOCALHOST = "localhost";
-	public static String LOCALPORT = "1099";
 	public static List<String> BUYERS = new ArrayList<String>();
 	public static List<String> SELLERS = new ArrayList<String>();
 	
@@ -88,18 +78,6 @@ public class AgentEnvironment {
 					L_MAINPORT,
 					true,
 					"the port number of the main container to connect to (default is " + MAINPORT + ")"
-				);
-		options.addOption(
-					S_LOCALHOST,
-					L_LOCALHOST,
-					true,
-					"the host name at which to start this container (default is " + LOCALHOST + ")"
-				);
-		options.addOption(
-					S_LOCALPORT,
-					L_LOCALPORT,
-					true,
-					"the port number at which to start this container (default is " + LOCALPORT + ")"
 				);
 		options.addOption(
 					S_BUYERS,
@@ -132,12 +110,6 @@ public class AgentEnvironment {
 		if(cl.hasOption(S_MAINPORT)) {
 			MAINPORT = cl.getOptionValue(S_MAINPORT);
 		}
-		if(cl.hasOption(S_LOCALHOST)) {
-			LOCALHOST = cl.getOptionValue(S_LOCALHOST);
-		}
-		if(cl.hasOption(S_LOCALPORT)) {
-			LOCALPORT = cl.getOptionValue(S_LOCALPORT);
-		}
 		// buyer and seller agents
 		if(cl.hasOption(S_BUYERS)) {
 			for(String buyer : cl.getOptionValue(S_BUYERS).split(";")) {
@@ -154,21 +126,17 @@ public class AgentEnvironment {
 	/**
 	 * Start a new container with the given settings.
 	 */
-	public static ContainerController startContainer(
-			boolean agent, String mainHost, String mainPort,
-			String localHost, String localPort) {
+	public static ContainerController startContainer() {
 		// get the JADE runtime singleton instance
 		Runtime rt = Runtime.instance();
 		
 		// prepare the settings for the platform that we want to get onto
 		Profile p = new ProfileImpl();
-		p.setParameter(Profile.MAIN_HOST, mainHost);
-		p.setParameter(Profile.MAIN_PORT, mainPort);
-		//p.setParameter(Profile.LOCAL_HOST, localHost);
-		//p.setParameter(Profile.LOCAL_PORT, localPort);
+		p.setParameter(Profile.MAIN_HOST, MAINHOST);
+		p.setParameter(Profile.MAIN_PORT, MAINPORT);
 		
 		// create and return a container
-		return agent ? rt.createAgentContainer(p) : rt.createMainContainer(p);
+		return AGENTCONTAINER ? rt.createAgentContainer(p) : rt.createMainContainer(p);
 	}
 
 	public static void main(String[] args) {
@@ -187,7 +155,7 @@ public class AgentEnvironment {
 		}
 		
 		// create a new container
-		container = startContainer(AGENTCONTAINER, MAINHOST, MAINPORT, LOCALHOST, LOCALPORT);
+		container = startContainer();
 		
 		// create some new agents and interpreters
 		agents = new ArrayList<ExternalAgent>(BUYERS.size() + SELLERS.size());
