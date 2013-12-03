@@ -121,11 +121,11 @@ public class SimpleTest extends TestCase {
 				}
 				
 				// tell Amazon to sell Hamlet
-				printToStdIn.println("Amazon:sell,Hamlet;Shakespeare,60,20,30");
-				System.err.println("Amazon:sell,Hamlet;Shakespeare,60,20,30");
+				printToStdIn.println("Amazon:sell,Hamlet;Shakespeare,50,20,60");
+				System.err.println("Amazon:sell,Hamlet;Shakespeare,50,20,60");
 				// tell Peter to buy it
-				printToStdIn.println("Peter:buy,Hamlet;Shakespeare,50,30");
-				System.err.println("Peter:buy,Hamlet;Shakespeare,50,30");
+				printToStdIn.println("Peter:buy,Hamlet;Shakespeare,40,60");
+				System.err.println("Peter:buy,Hamlet;Shakespeare,40,60");
 			}
 		}).start();
 		
