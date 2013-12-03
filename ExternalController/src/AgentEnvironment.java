@@ -2,8 +2,10 @@ import jade.core.Profile;
 import jade.core.ProfileImpl;
 import jade.core.Runtime;
 import jade.wrapper.ContainerController;
+import jade.wrapper.StaleProxyException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,11 +52,11 @@ public class AgentEnvironment {
 	public static final String S_SELLERS = "s";
 	public static final String L_SELLERS = "sellers";
 	// default values
-	public static boolean AGENTCONTAINER = false;
-	public static String MAINHOST = "localhost";
-	public static String MAINPORT = "1099";
-	public static List<String> BUYERS = new ArrayList<String>();
-	public static List<String> SELLERS = new ArrayList<String>();
+	public static final boolean AGENTCONTAINER = false;
+	public static final String MAINHOST = "localhost";
+	public static final String MAINPORT = "1099";
+	public static final List<String> BUYERS = new ArrayList<String>();
+	public static final List<String> SELLERS = new ArrayList<String>();
 	
 	public static Options defineOptions() {
 		// create Options object
@@ -100,67 +102,59 @@ public class AgentEnvironment {
 		CommandLineParser parser = new BasicParser();
 		return parser.parse(options, args);
 	}
-	public static void interpretArguments(CommandLine cl) {
+	public static Settings interpretArguments(CommandLine cl) {
+		Settings settings = new Settings();
+		
 		// if the agent container argument is there then run that way
-		AGENTCONTAINER = cl.hasOption(S_AGENTCONTAINER);
+		settings.setAgentContainer(cl.hasOption(S_AGENTCONTAINER));
 		// host and port stuff
 		if(cl.hasOption(S_MAINHOST)) {
-			MAINHOST = cl.getOptionValue(S_MAINHOST);
+			settings.setMainHost(cl.getOptionValue(S_MAINHOST));
 		}
 		if(cl.hasOption(S_MAINPORT)) {
-			MAINPORT = cl.getOptionValue(S_MAINPORT);
+			settings.setMainPort(cl.getOptionValue(S_MAINPORT));
 		}
 		// buyer and seller agents
 		if(cl.hasOption(S_BUYERS)) {
-			for(String buyer : cl.getOptionValue(S_BUYERS).split(";")) {
-				BUYERS.add(buyer);
-			}
+			settings.setBuyers(Arrays.asList(cl.getOptionValue(S_BUYERS).split(";")));
 		}
 		if(cl.hasOption(S_SELLERS)) {
-			for(String seller : cl.getOptionValue(S_SELLERS).split(";")) {
-				SELLERS.add(seller);
-			}
+			settings.setSellers(Arrays.asList(cl.getOptionValue(S_SELLERS).split(";")));
 		}
+		
+		// return the overriden settings
+		return settings;
 	}
+	
+	private ContainerController container;
+	private List<ExternalAgent> agents;
+	private Map<String, BookAgentInterpreter> interpreters;
+	private Thread interpreterThread;
 	
 	/**
 	 * Start a new container with the given settings.
 	 */
-	public static ContainerController startContainer() {
+	private void startContainer(Settings settings) {
 		// get the JADE runtime singleton instance
 		Runtime rt = Runtime.instance();
 		
 		// prepare the settings for the platform that we want to get onto
 		Profile p = new ProfileImpl();
-		p.setParameter(Profile.MAIN_HOST, MAINHOST);
-		p.setParameter(Profile.MAIN_PORT, MAINPORT);
+		p.setParameter(Profile.MAIN_HOST, settings.getMainHost());
+		p.setParameter(Profile.MAIN_PORT, settings.getMainPort());
 		
-		// create and return a container
-		return AGENTCONTAINER ? rt.createAgentContainer(p) : rt.createMainContainer(p);
+		// create a container
+		container = settings.isAgentContainer() ? rt.createAgentContainer(p) : rt.createMainContainer(p);
 	}
-
-	public static void main(String[] args) {
-		ContainerController container;
-		List<ExternalAgent> agents;
-		final Map<String, BookAgentInterpreter> interpreters;
-		
-		// work through the command-line arguments
-		try {
-			Options options = defineOptions();
-			CommandLine cl = parseArguments(options, args);
-			interpretArguments(cl);
-		} catch(ParseException e) {
-			System.err.println("Invalid arguments provided! Type -h for help.");
-			return;
-		}
-		
+	
+	public AgentEnvironment(Settings settings) {
 		// create a new container
-		container = startContainer();
-		
+		startContainer(settings);
+
 		// create some new agents and interpreters
-		agents = new ArrayList<ExternalAgent>(BUYERS.size() + SELLERS.size());
+		agents = new ArrayList<ExternalAgent>(settings.getBuyers().size() + settings.getSellers().size());
 		interpreters = new HashMap<String, BookAgentInterpreter>(agents.size());
-		for(String buyerName : BUYERS) {
+		for(String buyerName : settings.getBuyers()) {
 			ExternalAgent buyer;
 			// create a new external agent for each buyer
 			buyer = new ExternalAgent(container, buyerName, ExternalAgent.BUYER_CLASS_NAME);
@@ -169,7 +163,7 @@ public class AgentEnvironment {
 			// create and add an interpreter for them
 			interpreters.put(buyerName.toLowerCase(), new BookBuyerInterpreter(buyer));
 		}
-		for(String sellerName : SELLERS) {
+		for(String sellerName : settings.getSellers()) {
 			ExternalAgent seller;
 			// create a new external agent for each seller
 			seller = new ExternalAgent(container, sellerName, ExternalAgent.SELLER_CLASS_NAME);
@@ -178,38 +172,38 @@ public class AgentEnvironment {
 			// create and add an interpreter for them
 			interpreters.put(sellerName.toLowerCase(), new BookSellerInterpreter(seller));
 		}
-		
+
 		// start the RMA
-		new ExternalAgent(container, "rma" + (AGENTCONTAINER ? "-agent" : ""), "jade.tools.rma.rma");
-		
+		agents.add(new ExternalAgent(container, "rma" + (settings.isAgentContainer() ? "-agent" : ""), "jade.tools.rma.rma"));
+
 		// start interpreting user input
-		new Thread(new Runnable() {
+		interpreterThread = new Thread(new Runnable() {
 
 			@Override
 			public void run() {
 				boolean continuePolling = true;
-				
+
 				// get input from stdin
 				Scanner s = new Scanner(System.in);
-				
+
 				// keep interpreting until there's no more input, or until
 				// neither agents want to continue
 				while(s.hasNextLine() && continuePolling) {
 					try {
 						// get the next line
 						String line = s.nextLine();
-						
+
 						// if the line includes a colon (:)
 						if(line.contains(":")) {
 							// split it at the colon
 							String[] tokens = line.split(":");
-							
+
 							// the first token should say which agent is meant by this message
 							String agent = tokens[0].toLowerCase();
-							
+
 							// let the agent meant by it interpret it
 							continuePolling = interpreters.get(agent).interpret(tokens[1]);
-						// otherwise
+							// otherwise
 						} else {
 							// let all the agents interpret it
 							for(BookAgentInterpreter interpreter : interpreters.values()) {
@@ -223,7 +217,87 @@ public class AgentEnvironment {
 					}
 				}
 			}
-			
-		}).start();
+
+		});
+		interpreterThread.start();
+	}
+	
+	public void kill() {
+		// stop the interpreter thread
+		interpreterThread.interrupt();
+		
+		// kill the agents
+		for(ExternalAgent agent : agents) {
+			agent.kill();
+		}
+		
+		// kill the container
+		try {
+			container.kill();
+		} catch (StaleProxyException e) {
+			// do nothing
+		}
+		
+		// free all the memory
+		agents = null;
+		container = null;
+		interpreters = null;
+		interpreterThread = null;
+	}
+
+	public static void main(String[] args) {		
+		// work through the command-line arguments
+		try {
+			// read and parse them
+			Options options = defineOptions();
+			CommandLine cl = parseArguments(options, args);
+			// start a new environment based on them
+			new AgentEnvironment(interpretArguments(cl));
+		} catch(ParseException e) {
+			System.err.println("Invalid arguments provided! Type -h for help.");
+			return;
+		}
+	}
+	
+	// a bean for the settings of the environment
+	static class Settings {
+		// default settings
+		private boolean agentContainer = AGENTCONTAINER;
+		private String mainHost = MAINHOST;
+		private String mainPort = MAINPORT;
+		private List<String> buyers = BUYERS;
+		private List<String> sellers = SELLERS;
+		
+		
+		public boolean isAgentContainer() {
+			return agentContainer;
+		}
+		public void setAgentContainer(boolean agentContainer) {
+			this.agentContainer = agentContainer;
+		}
+		public String getMainHost() {
+			return mainHost;
+		}
+		public void setMainHost(String mainHost) {
+			this.mainHost = mainHost;
+		}
+		public String getMainPort() {
+			return mainPort;
+		}
+		public void setMainPort(String mainPort) {
+			this.mainPort = mainPort;
+		}
+		public List<String> getBuyers() {
+			return buyers;
+		}
+		public void setBuyers(List<String> buyers) {
+			this.buyers = buyers;
+		}
+		public List<String> getSellers() {
+			return sellers;
+		}
+		public void setSellers(List<String> sellers) {
+			this.sellers = sellers;
+		}		
 	}
 }

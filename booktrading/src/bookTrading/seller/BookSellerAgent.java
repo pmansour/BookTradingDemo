@@ -368,7 +368,7 @@ public class BookSellerAgent extends Agent implements BookSeller {
 					// remove the book from the catalogue
 					catalogue.remove(proposal.getItem().toString());
 					// notify the user of success
-					gui.notifyUser(String.format(SUCCESS_MSG, proposal.getItem().getTitle(), proposal.getPrice()));
+					gui.notifyUser(String.format(SUCCESS_MSG, proposal.getItem().toString(), proposal.getPrice()));
 				// otherwise
 				} else {
 					// reply with a disconfirmation

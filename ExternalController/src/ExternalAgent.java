@@ -29,7 +29,7 @@ public class ExternalAgent implements BookBuyer, BookSeller {
 	 * @param agentName The desired name for the agent.
 	 * @param agentClass The class of the agent to start.
 	 */
-	public void startAgent(String agentName, String agentClass) {
+	private void startAgent(String agentName, String agentClass) {
 		// create and start the agent
 		try {
 			agent = container.createNewAgent(agentName, agentClass, null);
@@ -59,6 +59,14 @@ public class ExternalAgent implements BookBuyer, BookSeller {
 			agent.putO2AObject(info, false);
 		} catch (StaleProxyException e) {
 			e.printStackTrace(System.err);
+		}
+	}
+	
+	public void kill() {
+		try {
+			agent.kill();
+		} catch (StaleProxyException e) {
+			// do nothing
 		}
 	}
 }

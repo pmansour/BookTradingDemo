@@ -157,7 +157,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		addBehaviour(new PurchaseManager(this, book, maxPrice, deadline));
 		// echo the new purchase task
 		gui.notifyUser(String.format(CONFIRM_PURCHASE,
-					book,
+					book.toString(),
 					maxPrice,
 					deadline.toString()
 				));
@@ -259,7 +259,7 @@ public class BookBuyerAgent extends Agent implements BookBuyer{
 		/** The "reply with" parameter pattern for the accept proposal messages. */
 		private static final String RW_AP = "order%d";
 		/** The usual message deadline which sellers have to reply by. */
-		private static final long MSG_DEADLINE = 2 * 1000;
+		private static final long MSG_DEADLINE = 3 * 1000;
 		/** What to tell the user if there was a successful purchase. */
 		private static final String SUCCESS_MSG = "Book %s was bought for $%.2f.";
 		
